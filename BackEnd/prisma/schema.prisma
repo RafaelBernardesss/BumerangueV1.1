@@ -1,0 +1,69 @@
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+ 
+}
+
+model Usuario {
+  id       Int     @id @default(autoincrement())
+  nome     String
+  senha    String
+  email    String  @unique
+  cpf      String  @unique
+  telefone String? 
+  foto     String?
+  cidade   String?
+  estado   String?
+  pushToken String?
+  anuncios Anuncio[]
+  propostas Proposta[]
+}
+
+model Categoria{
+  id Int @id @default(autoincrement())
+  nome String @unique
+  anuncios Anuncio[]
+}
+
+model Anuncio{
+  id Int @id @default(autoincrement())
+  titulo String
+  descricao String
+  preferencia String
+  foto String?
+  disponibilidade String?        
+  status String @default("ativo") 
+
+  
+  cidade String?                  
+  estado String?                  
+
+  criadoEm DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  usuarioId Int
+
+  categoria Categoria @relation(fields: [categoriaId], references: [id])
+  categoriaId Int
+
+  propostas Proposta[]
+}
+
+model Proposta{
+  id Int @id @default(autoincrement())
+  mensagem String
+  status String @default("pendente") 
+  criadoEm DateTime @default(now())
+
+  anuncioId Int
+  anuncio Anuncio @relation(fields: [anuncioId], references: [id])
+
+  propostoPor Int
+  usuario Usuario @relation(fields: [propostoPor], references: [id])
+}
