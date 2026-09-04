@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
-const API_URL = "http://172.30.1.37:3000";
+const API_URL = "http://192.168.137.138:3000";
 
 type Usuario = {
   id: number;
@@ -43,7 +43,7 @@ export default function Admin() {
   async function buscarUsuarios() {
     try {
       const response = await fetch(
-        "http://172.30.1.37:3000/usuarios/listar"
+        "http://192.168.137.138:3000/usuarios/listar"
       );
       const data = await response.json();
 
@@ -100,7 +100,7 @@ export default function Admin() {
   async function deletarUsuario(id: number) {
     try {
       const response = await fetch(
-        `http://172.30.1.37:3000/usuarios/deletar/${id}`,
+        `http://192.168.137.138:3000/usuarios/deletar/${id}`,
         { method: "DELETE" }
       );
 

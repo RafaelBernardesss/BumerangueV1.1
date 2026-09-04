@@ -16,7 +16,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Flecha from "../../components/HeaderFlecha";
 
-const API_URL = "http://172.30.1.37:3000";
+const API_URL = "http://192.168.137.138:3000";
 
 type Anuncio = {
   id: number;
@@ -65,7 +65,10 @@ export default function MeusAnuncios() {
       const dados = await resposta.json();
 
       if (resposta.ok) {
-        setAnuncios(dados.anuncios);
+        // Anúncios "em_andamento" (proposta aceita) não aparecem mais aqui
+        setAnuncios(
+          (dados.anuncios as Anuncio[]).filter((a) => a.status !== "em_andamento")
+        );
       } else {
         Alert.alert("Erro", "Não foi possível carregar seus anúncios.");
       }

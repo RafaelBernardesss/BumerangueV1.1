@@ -86,6 +86,9 @@ export async function listarPropostasRecebidas(req, res) {
 
 /**
  * Aceita ou recusa uma proposta e notifica quem a enviou.
+ * Se aceita, o anúncio passa para "em_andamento" (some das listas de
+ * anúncios disponíveis) e as outras propostas pendentes do mesmo
+ * anúncio são recusadas automaticamente.
  * Rota sugerida: PUT /propostas/:id/responder
  * Body: { status: "aceita" | "recusada" }
  */
@@ -119,6 +122,47 @@ export async function responderProposta(req, res) {
       `Sua proposta para "${proposta.anuncio.titulo}" foi ${status}.`,
       { tipo: "resposta_proposta" }
     );
+
+    if (status === "aceita") {
+      // O anúncio deixa de estar disponível e passa a "em_andamento"
+      await prisma.anuncio.update({
+        where: { id: proposta.anuncioId },
+        data: { status: "em_andamento" },
+      });
+
+      // As demais propostas pendentes desse anúncio são recusadas
+      // automaticamente, já que ele não está mais disponível
+      const outrasPendentes = await prisma.proposta.findMany({
+        where: {
+          anuncioId: proposta.anuncioId,
+          id: { not: proposta.id },
+          status: "pendente",
+        },
+        include: { usuario: true },
+      });
+
+      if (outrasPendentes.length > 0) {
+        await prisma.proposta.updateMany({
+          where: {
+            anuncioId: proposta.anuncioId,
+            id: { not: proposta.id },
+            status: "pendente",
+          },
+          data: { status: "recusada" },
+        });
+
+        await Promise.all(
+          outrasPendentes.map((p) =>
+            enviarNotificacaoPush(
+              p.usuario.pushToken,
+              "Proposta recusada",
+              `Sua proposta para "${proposta.anuncio.titulo}" foi recusada — o anúncio já foi fechado com outra pessoa.`,
+              { tipo: "resposta_proposta" }
+            )
+          )
+        );
+      }
+    }
 
     return res.status(200).json({ mensagem: "Proposta atualizada.", proposta });
   } catch (erro) {
