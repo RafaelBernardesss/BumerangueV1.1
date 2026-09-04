@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
 
+
 const API_URL = "http://172.30.1.37:3000";
 
 type Contato = {
