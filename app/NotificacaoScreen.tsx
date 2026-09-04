@@ -16,7 +16,7 @@ import * as Notifications from "expo-notifications";
 import { Ionicons } from "@expo/vector-icons";
 import Flecha from "../components/HeaderFlecha";
 
-const API_URL = "http://192.168.18.7:3000";
+const API_URL = "http://172.30.1.37:3000";
 
 type PropostaRecebida = {
   id: number;

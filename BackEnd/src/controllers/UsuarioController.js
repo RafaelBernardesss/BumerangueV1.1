@@ -2,10 +2,7 @@ import fs from "fs";
 import path from "path";
 import prisma from "../prisma/Client.js"; 
 
-/**
- * Busca os dados do usuário logado para preencher a tela de Perfil.
- * Rota sugerida: GET /usuario/:id
- */
+
 export async function buscarUsuario(req, res) {
   try {
     const idUsuario = Number(req.params.id || req.user?.id);
@@ -71,7 +68,7 @@ export async function atualizarFotoPerfil(req, res) {
       });
     }
 
-    // Caminho relativo salvo no banco (ajuste conforme como você vai servir os arquivos estáticos)
+    
     const caminhoRelativo = path.join("uploads", "perfil", req.file.filename);
 
     const usuarioAtualizado = await prisma.usuario.update({
@@ -98,10 +95,7 @@ export async function atualizarFotoPerfil(req, res) {
   }
 }
 
-/**
- * Remove a foto de perfil do usuário (apaga o arquivo do disco e limpa o campo no banco).
- * Rota sugerida: DELETE /usuario/:id/foto
- */
+
 export async function removerFotoPerfil(req, res) {
   try {
     const idUsuario = Number(req.params.id || req.user?.id);
@@ -151,11 +145,7 @@ export async function removerFotoPerfil(req, res) {
   }
 }
 
-/**
- * Atualiza o nome de usuário.
- * Rota sugerida: PUT /usuario/:id/nome  (ou /usuario/nome se usar auth por token)
- * Body esperado: { "nome": "Novo Nome" }
- */
+
 export async function atualizarNomeUsuario(req, res) {
   try {
     const idUsuario = Number(req.params.id || req.user?.id);
@@ -201,11 +191,7 @@ export async function atualizarNomeUsuario(req, res) {
   }
 }
 
-/**
- * Atualiza o telefone do usuário.
- * Rota sugerida: PUT /usuario/:id/telefone  (ou /usuario/telefone se usar auth por token)
- * Body esperado: { "telefone": "(11) 99999-9999" }
- */
+
 export async function atualizarTelefone(req, res) {
   try {
     const idUsuario = Number(req.params.id || req.user?.id);
@@ -257,14 +243,7 @@ export async function atualizarTelefone(req, res) {
   }
 }
 
-/**
- * Atualiza a cidade/estado do usuário (preenchido via GPS ou manualmente no app).
- * Rota sugerida: PUT /usuario/:id/localizacao  (ou /usuario/localizacao se usar auth por token)
- * Body esperado: { "cidade": "São Paulo", "estado": "SP" }
- *
- * Os dois campos são opcionais individualmente (o app pode mandar só um deles),
- * mas pelo menos um precisa vir preenchido.
- */
+
 export async function atualizarLocalizacao(req, res) {
   try {
     const idUsuario = Number(req.params.id || req.user?.id);
@@ -335,14 +314,7 @@ export async function atualizarLocalizacao(req, res) {
   }
 }
 
-/**
- * Redefine a senha do usuário.
- * Rota sugerida: PUT /usuario/:id/senha  (ou /usuario/senha se usar auth por token)
- * Body esperado: { "senhaAtual": "...", "novaSenha": "...", "confirmarNovaSenha": "..." }
- *
- * Exige a senha atual por segurança. Se preferir um fluxo de "esqueci minha senha"
- * (sem senha atual, com token por e-mail), me avise que crio essa variação também.
- */
+
 export async function redefinirSenha(req, res) {
   try {
     const idUsuario = Number(req.params.id || req.user?.id);
@@ -394,10 +366,7 @@ export async function redefinirSenha(req, res) {
   }
 }
 
-/**
- * Exclui a conta do usuário permanentemente, junto com a foto de perfil salva no disco.
- * Rota sugerida: DELETE /usuario/:id
- */
+
 export async function excluirConta(req, res) {
   try {
     const idUsuario = Number(req.params.id || req.user?.id);
@@ -476,5 +445,75 @@ export async function salvarPushToken(req, res) {
   } catch (erro) {
     console.error("Erro ao salvar token de notificação:", erro);
     return res.status(500).json({ erro: "Erro interno ao salvar o token de notificação." });
+  }
+}
+
+export async function listarContatos(req, res) {
+  try {
+    const idUsuario = Number(req.params.id || req.user?.id);
+
+    if (!idUsuario) {
+      return res.status(400).json({ erro: "ID do usuário não informado." });
+    }
+
+    // Propostas aceitas onde o usuário é o DONO do anúncio
+    const comoAnunciante = await prisma.proposta.findMany({
+      where: {
+        status: "aceita",
+        anuncio: { usuarioId: idUsuario },
+      },
+      include: {
+        usuario: { select: { id: true, nome: true, foto: true } }, // quem propôs
+      },
+      orderBy: { criadoEm: "desc" },
+    });
+
+    // Propostas aceitas onde o usuário é QUEM PROPÔS
+    const comoProponente = await prisma.proposta.findMany({
+      where: {
+        status: "aceita",
+        propostoPor: idUsuario,
+      },
+      include: {
+        anuncio: {
+          select: {
+            usuario: { select: { id: true, nome: true, foto: true } }, // dono do anúncio
+          },
+        },
+      },
+      orderBy: { criadoEm: "desc" },
+    });
+
+    const mapaContatos = new Map();
+
+    for (const proposta of comoAnunciante) {
+      const outraPessoa = proposta.usuario;
+      if (outraPessoa.id !== idUsuario) {
+        mapaContatos.set(outraPessoa.id, outraPessoa);
+      }
+    }
+
+    for (const proposta of comoProponente) {
+      const outraPessoa = proposta.anuncio.usuario;
+      if (outraPessoa.id !== idUsuario) {
+        mapaContatos.set(outraPessoa.id, outraPessoa);
+      }
+    }
+
+    const contatos = Array.from(mapaContatos.values()).map((usuario) => ({
+      id: usuario.id,
+      nome: usuario.nome,
+      foto: usuario.foto,
+      ultimaMensagem: null,
+      horaUltimaMensagem: null,
+      naoLidas: 0,
+      online: false,
+      favorito: false,
+    }));
+
+    return res.status(200).json({ contatos });
+  } catch (erro) {
+    console.error("Erro ao listar contatos:", erro);
+    return res.status(500).json({ erro: "Erro interno ao listar contatos." });
   }
 }

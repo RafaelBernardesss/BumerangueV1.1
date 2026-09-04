@@ -15,7 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
 
-const API_URL = "http://192.168.18.7:3000";
+const API_URL = "http://172.30.1.37:3000";
 
 type Anuncio = {
   id: number;
@@ -386,7 +386,7 @@ export default function Home() {
           <Ionicons name="add" size={36} color="#00AFFF" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/Chat")}>
+        <TouchableOpacity onPress={() => router.push("/Contatos")}>
           <Ionicons name="chatbubble-outline" size={30} color="#999" />
         </TouchableOpacity>
 
