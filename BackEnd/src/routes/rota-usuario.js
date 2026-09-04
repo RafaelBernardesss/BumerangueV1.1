@@ -10,6 +10,7 @@ import {
   redefinirSenha,
   excluirConta,
   salvarPushToken,
+  listarContatos,
 } from "../controllers/UsuarioController.js";
 import uploadFoto from "../middlewares/uploadFoto.js";
 
@@ -28,6 +29,7 @@ function tratarUploadFoto(req, res, next) {
   });
 }
 
+router.get("/:id/contatos", listarContatos);
 router.get("/:id", buscarUsuario);
 router.put("/:id/foto", tratarUploadFoto, atualizarFotoPerfil);
 router.delete("/:id/foto", removerFotoPerfil);

@@ -386,7 +386,7 @@ export default function Home() {
           <Ionicons name="add" size={36} color="#00AFFF" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/Chat")}>
+        <TouchableOpacity onPress={() => router.push("/Contatos")}>
           <Ionicons name="chatbubble-outline" size={30} color="#999" />
         </TouchableOpacity>
 
