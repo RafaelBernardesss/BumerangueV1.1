@@ -22,6 +22,8 @@ model Usuario {
   pushToken String?
   anuncios Anuncio[]
   propostas Proposta[]
+   mensagensEnviadas  Mensagem[] @relation("MensagensEnviadas")
+  mensagensRecebidas Mensagem[] @relation("MensagensRecebidas")
 }
 
 model Categoria{
@@ -66,4 +68,16 @@ model Proposta{
 
   propostoPor Int
   usuario Usuario @relation(fields: [propostoPor], references: [id])
+}
+
+model Mensagem {
+  id Int @id @default(autoincrement())
+  conteudo String
+  data_hora DateTime @default(now())
+
+  remetenteId Int
+  remetente Usuario @relation("MensagensEnviadas", fields: [remetenteId], references: [id])
+
+  destinatarioId Int
+  destinatario Usuario @relation("MensagensRecebidas", fields: [destinatarioId], references: [id])
 }

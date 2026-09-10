@@ -11,7 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 //components
 import Header from "../components/HeaderEscolha";
 
-const API_URL = "http://192.168.137.138:3000";
+const API_URL = "http://172.30.0.226:3000";
 
 // Mapa de nome completo do estado -> sigla (UF), pra converter o que o GPS retorna
 const ESTADOS_UF: Record<string, string> = {

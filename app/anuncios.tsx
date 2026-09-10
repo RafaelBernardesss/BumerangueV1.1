@@ -15,7 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
 
-const API_URL = "http://192.168.137.138:3000";
+const API_URL = "http://172.30.0.226:3000";
 
 type Anuncio = {
   id: number;

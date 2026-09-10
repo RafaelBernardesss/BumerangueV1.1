@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
 
 
-const API_URL = "http://192.168.137.138:3000";
+const API_URL = "http://172.30.0.226:3000";
 
 type Contato = {
   id: number;
@@ -279,7 +279,7 @@ export default function Contatos() {
           <Ionicons name="add" size={36} color="#00AFFF" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/Chat")}>
+        <TouchableOpacity onPress={() => router.push("/Contatos")}>
           <Ionicons name="chatbubble" size={30} color="#00AFFF" />
         </TouchableOpacity>
 

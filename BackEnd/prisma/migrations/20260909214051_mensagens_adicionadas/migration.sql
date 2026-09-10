@@ -1,0 +1,8 @@
+-- CreateTable
+CREATE TABLE "Mensagem" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "conteudo" TEXT NOT NULL,
+    "data_hora" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "usuarioId" INTEGER NOT NULL,
+    CONSTRAINT "Mensagem_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "Usuario" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);

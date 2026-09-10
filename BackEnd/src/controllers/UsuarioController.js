@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import prisma from "../prisma/Client.js"; 
+import prisma from "../prisma/Client.js";
 
 
 export async function buscarUsuario(req, res) {
@@ -54,7 +54,7 @@ export async function atualizarFotoPerfil(req, res) {
 
     if (!usuarioExistente) {
       // Remove o arquivo enviado, já que o usuário não existe
-      fs.unlink(req.file.path, () => {});
+      fs.unlink(req.file.path, () => { });
       return res.status(404).json({ erro: "Usuário não encontrado." });
     }
 
@@ -68,7 +68,7 @@ export async function atualizarFotoPerfil(req, res) {
       });
     }
 
-    
+
     const caminhoRelativo = path.join("uploads", "perfil", req.file.filename);
 
     const usuarioAtualizado = await prisma.usuario.update({
@@ -403,6 +403,8 @@ export async function excluirConta(req, res) {
     return res.status(500).json({ erro: "Erro interno ao excluir a conta." });
   }
 }
+
+
 export async function salvarPushToken(req, res) {
   try {
     const idUsuario = Number(req.params.id || req.user?.id);
