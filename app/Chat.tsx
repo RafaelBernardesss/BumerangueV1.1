@@ -17,7 +17,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const API_URL = "http://172.30.1.33:3000"; // mesmo IP usado na tela de Contatos
+const API_URL = "http://172.30.1.2:3000"; // mesmo IP usado na tela de Contatos
 
 type Mensagem = {
   id: number;

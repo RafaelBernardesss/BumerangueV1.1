@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
 import { buscarHistorico, limparHistorico, ItemHistorico } from "../src/utils/historico";
 
-const API_URL = "http://172.30.1.33:3000"; // mesmo IP usado nas outras telas
+const API_URL = "http://172.30.1.2:3000"; // mesmo IP usado nas outras telas
 
 // Monta a URL completa da foto a partir do caminho relativo salvo no banco
 function urlFoto(caminho: string | null) {
