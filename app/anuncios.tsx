@@ -14,8 +14,13 @@ import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
+import { 
+      adicionarAoHistorico,
+      buscarHistorico,
+      ItemHistorico
+   } from "../src/utils/historico";
 
-const API_URL = "http://172.30.0.226:3000";
+const API_URL = "http://172.30.1.33:3000";
 
 type Anuncio = {
   id: number;
@@ -24,7 +29,7 @@ type Anuncio = {
   preferencia: string;
   foto: string | null;
   disponibilidade: string | null;
-  status: "ativo" | "vendido" | "pausado";
+  status: "ativo" | "trocado";
   cidade: string | null;
   estado: string | null;
   criadoEm: string;
@@ -44,14 +49,16 @@ function urlFoto(caminho: string | null) {
 // Rótulo e cor do status, seguindo a mesma paleta usada no resto do app
 const CONFIG_STATUS: Record<Anuncio["status"], { label: string; cor: string }> = {
   ativo: { label: "ATIVO", cor: "#00AFFF" },
-  pausado: { label: "PAUSADO", cor: "#FFB800" },
-  vendido: { label: "TROCADO", cor: "#00FF44" },
+  trocado: { label: "TROCADO", cor: "#00FF44" },
 };
 
 export default function Home() {
   const { name: nomeInicial } = useLocalSearchParams();
   const [name, setName] = useState(nomeInicial);
   const [foto, setFoto] = useState<string | null>(null);
+  const [historicoRecente, setHistoricoRecente] = useState<ItemHistorico[]>([]);
+  const [carregandoHistorico, setCarregandoHistorico] = useState(true);
+
 
   // Quantidade de notificações não lidas, exibida no badge do sino.
   // TODO: trocar pelo valor real vindo do backend (ex: GET /usuarios/:id/notificacoes/nao-lidas)
@@ -60,6 +67,28 @@ export default function Home() {
   // Anúncios criados pelo próprio usuário logado (GET /anuncios?usuarioId=:id)
   const [meusAnuncios, setMeusAnuncios] = useState<Anuncio[]>([]);
   const [carregandoAnuncios, setCarregandoAnuncios] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      async function carregarHistorico(){
+        try{
+          setCarregandoHistorico(true);
+
+          const dados = await buscarHistorico();
+
+          //pega so os 3 serviços mais recentes
+          setHistoricoRecente(dados.slice(0, 3));
+  
+        }catch(erro){
+          console.log("Erro ao carregar historico",erro)
+        }finally{
+          setCarregandoHistorico(false);
+        }
+      }
+
+      carregarHistorico()
+    }, [])
+  )
 
   useFocusEffect(
     useCallback(() => {
@@ -162,11 +191,7 @@ export default function Home() {
 
   const [menuAberto, setMenuAberto] = useState(false);
 
-  const historicoRecente = [
-    { nome: "Criação de Logo", valor: "R$ 100,00" },
-    { nome: "Correção de Bug", valor: "R$ 80,00" },
-    { nome: "Aulas de Física", valor: "R$ 70,00" },
-  ];
+  
 
   // Iniciais pra usar como fallback quando não há foto de perfil
   const iniciais = (name || "")
@@ -329,45 +354,110 @@ export default function Home() {
         </ScrollView>
 
         {/* HISTÓRICO */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle} numberOfLines={1}>
-            Seu histórico recente
-          </Text>
-          <TouchableOpacity
-            style={styles.linkButton}
-            onPress={() => router.push("/historicoServico")}
-          >
-            <Text style={styles.link}>Ver todos</Text>
-          </TouchableOpacity>
-        </View>
+<View style={styles.sectionHeader}>
+  <Text style={styles.sectionTitle} numberOfLines={1}>
+    Seu histórico recente
+  </Text>
 
-        <View style={styles.historyCard}>
-          {historicoRecente.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.historyItem,
-                index === historicoRecente.length - 1 && {
-                  borderBottomWidth: 0,
-                },
-              ]}
-              onPress={() => router.push("/historicoServico")}
-            >
-              <View style={styles.historyLeft}>
-                <Ionicons name="checkmark-circle" size={28} color="#00FF44" />
-                <View>
-                  <Text style={styles.historyTitle}>{item.nome}</Text>
-                  <Text style={styles.historySubtitle}>Serviço concluído</Text>
-                </View>
-              </View>
+  <TouchableOpacity
+    style={styles.linkButton}
+    onPress={() => router.push("/historicoServico")}
+  >
+    <Text style={styles.link}>Ver todos</Text>
+  </TouchableOpacity>
+</View>
 
-              <Text style={styles.historyPrice}>{item.valor}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+<View style={styles.historyCard}>
 
-        <View style={{ height: 100 }} />
-      </ScrollView>
+  {carregandoHistorico ? (
+
+    <View style={styles.historyEmpty}>
+      <Text style={styles.historyEmptyText}>
+        Carregando histórico...
+      </Text>
+    </View>
+
+  ) : historicoRecente.length === 0 ? (
+
+    <View style={styles.historyEmpty}>
+      <Ionicons
+        name="time-outline"
+        size={32}
+        color="#444"
+      />
+
+      <Text style={styles.historyEmptyText}>
+        Você ainda não visualizou nenhum anúncio.
+      </Text>
+    </View>
+
+  ) : (
+
+    historicoRecente.map((item, index) => {
+
+      const fotoHistorico = item.foto
+        ? `${API_URL}/${item.foto.replace(/\\/g, "/")}`
+        : null;
+
+      return (
+        <TouchableOpacity
+          key={`${item.id}-${item.visitadoEm}`}
+          style={[
+            styles.historyItem,
+            index === historicoRecente.length - 1 && {
+              borderBottomWidth: 0,
+            },
+          ]}
+          activeOpacity={0.8}
+          onPress={() =>
+            router.push(`/AnuncioScreen?id=${item.id}`)
+          }
+        >
+
+          {/* FOTO DO ANÚNCIO */}
+          {fotoHistorico ? (
+
+            <Image
+              source={{ uri: fotoHistorico }}
+              style={styles.historyImage}
+            />
+
+          ) : (
+
+            <View style={styles.historyImagePlaceholder}>
+              <Ionicons
+                name="image-outline"
+                size={24}
+                color="#444"
+              />
+            </View>
+
+          )}
+
+          {/* INFORMAÇÕES */}
+          <View style={styles.historyInfo}>
+
+            <Text style={styles.historyTitle}numberOfLines={1}>{item.titulo}</Text>
+            <Text style={styles.historySubtitle} numberOfLines={1}>{item.usuarioNome}</Text>
+            <Text style={styles.historyDate}> Visualizado recentemente</Text>
+
+          </View>
+
+          {/* SETA */}
+          <Ionicons
+            name="chevron-forward"
+            size={22}
+            color="#555"
+          />
+
+        </TouchableOpacity>
+      );
+
+    })
+
+  )}
+
+</View>
 
       {/* MENU INFERIOR */}
       <View style={styles.bottomBar}>
@@ -669,4 +759,43 @@ const styles = StyleSheet.create({
   addButton: {
     marginTop: -20,
   },
+historyImage: {
+  width: 65,
+  height: 65,
+  borderRadius: 12,
+},
+
+historyImagePlaceholder: {
+  width: 65,
+  height: 65,
+  borderRadius: 12,
+  backgroundColor: "#161D2E",
+  justifyContent: "center",
+  alignItems: "center",
+},
+
+historyInfo: {
+  flex: 1,
+  marginLeft: 12,
+  marginRight: 8,
+},
+
+historyDate: {
+  color: "#555",
+  fontSize: 11,
+  marginTop: 4,
+},
+
+historyEmpty: {
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: 35,
+},
+
+historyEmptyText: {
+  color: "#555",
+  marginTop: 8,
+  textAlign: "center",
+  paddingHorizontal: 20,
+},
 });

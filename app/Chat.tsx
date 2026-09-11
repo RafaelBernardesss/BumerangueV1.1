@@ -15,8 +15,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const API_URL = "http://172.30.0.226:3000"; // mesmo IP usado na tela de Contatos
+const API_URL = "http://172.30.1.33:3000"; // mesmo IP usado na tela de Contatos
 
 type Mensagem = {
   id: number;
@@ -58,8 +59,8 @@ export default function Chat() {
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const flatListRef = useRef<FlatList>(null);
 
-  // Passo A: buscar o usuário logado no AsyncStorage
-  // (mesma chave "usuarioId" usada na tela de Contatos)
+
+
   useEffect(() => {
     async function carregarUsuarioLogado() {
       try {
@@ -73,7 +74,7 @@ export default function Chat() {
     carregarUsuarioLogado();
   }, []);
 
-  // Passo A2: buscar os dados reais do contato (nome, foto) pelo outroUsuarioId
+
   useEffect(() => {
     async function carregarOutroUsuario() {
       try {
@@ -88,7 +89,6 @@ export default function Chat() {
     if (outroUsuarioId) carregarOutroUsuario();
   }, [outroUsuarioId]);
 
-  // Passo B: buscar a conversa, só depois que soubermos quem sou eu
   useEffect(() => {
     if (!meuUsuarioId) return; // espera o AsyncStorage carregar
 
@@ -120,6 +120,8 @@ export default function Chat() {
     }
 
     carregarMensagens();
+    const interval = setInterval(() => carregarMensagens(), 5000);
+    return () => clearInterval(interval);
   }, [meuUsuarioId, outroUsuarioId]);
 
   // Passo C: enviar mensagem
@@ -188,12 +190,10 @@ export default function Chat() {
   const fotoContato = urlFoto(outroUsuario?.foto ?? null);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior="padding"
-      keyboardVerticalOffset={85}
-    >
-      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+    <KeyboardAvoidingView style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <SafeAreaView style={styles.container}>
+      
         <View style={styles.inner}>
           {/* CABEÇALHO */}
           <View style={styles.header}>
@@ -201,7 +201,7 @@ export default function Chat() {
               style={styles.botaoVoltar}
               onPress={() => router.back()}
             >
-              <Ionicons name="arrow-back" size={26} color="#fff" />
+              <Ionicons name="arrow-back" size={26} color="#00AFFF" />
             </TouchableOpacity>
 
             <View style={styles.avatarContainer}>
@@ -225,7 +225,7 @@ export default function Chat() {
             </View>
 
             <TouchableOpacity style={styles.menuButton}>
-              <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
+              <Ionicons name="ellipsis-vertical" size={24} color="#00AFFF" />
             </TouchableOpacity>
           </View>
 
@@ -269,7 +269,7 @@ export default function Chat() {
             </TouchableOpacity>
           </View>
         </View>
-      </TouchableWithoutFeedback>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }
@@ -277,12 +277,12 @@ export default function Chat() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#050B18",
+    backgroundColor: "#0B0B0B",
   },
 
   inner: {
     flex: 1,
-    backgroundColor: "#050B18",
+    backgroundColor: "#0B0B0B",
   },
 
   header: {

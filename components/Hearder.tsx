@@ -72,7 +72,7 @@ export default function BumerangueLogo({
 
           <TouchableOpacity
             style={styles.item}
-            onPress={() => irPara("/historicoServicos")}
+            onPress={() => irPara("/historicoServico")}
           >
             <Ionicons name="time-outline" size={20} color="#00AFFF" />
             <Text style={styles.itemTexto}>Histórico</Text>

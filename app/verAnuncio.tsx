@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import Header from "../components/HeaderEscolha";
 
-const API_URL = "http://172.30.0.226:3000";
+const API_URL = "http://172.30.1.33:3000";
 
 type Anuncio = {
   id: number;

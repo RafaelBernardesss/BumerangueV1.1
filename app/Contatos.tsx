@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
 
 
-const API_URL = "http://172.30.0.226:3000";
+const API_URL = "http://172.30.1.33:3000";
 
 type Contato = {
   id: number;

@@ -43,7 +43,7 @@ export default function Admin() {
   async function buscarUsuarios() {
     try {
       const response = await fetch(
-        "http://172.30.0.226:3000/usuarios/listar"
+        "http://172.30.1.33:3000/usuarios/listar"
       );
       const data = await response.json();
 
@@ -100,7 +100,7 @@ export default function Admin() {
   async function deletarUsuario(id: number) {
     try {
       const response = await fetch(
-        `http://172.30.0.226:3000/usuarios/deletar/${id}`,
+        `http://172.30.1.33:3000/usuarios/deletar/${id}`,
         { method: "DELETE" }
       );
 
