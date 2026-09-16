@@ -31,15 +31,6 @@ const SELECT_ANUNCIO_COMPLETO = {
   },
 };
 
-/**
- * Cria um novo anúncio.
- * Rota sugerida: POST /anuncios
- * Body (multipart/form-data): titulo, descricao, preferencia, categoriaId, usuarioId,
- *   disponibilidade (opcional), foto (arquivo, opcional)
- *
- * A localização (cidade/estado) é copiada automaticamente do perfil do
- * usuário no momento da criação — o usuário não precisa digitar isso.
- */
 export async function criarAnuncio(req, res) {
   try {
     const {
@@ -104,7 +95,7 @@ export async function criarAnuncio(req, res) {
         preferencia: preferencia.trim(),
         disponibilidade: disponibilidade ? disponibilidade.trim() : null,
         foto: caminhoFoto,
-        // Localização puxada do perfil do usuário no momento do cadastro do anúncio
+
         cidade: usuario.cidade || null,
         estado: usuario.estado || null,
         usuario: { connect: { id: idUsuario } },
@@ -124,10 +115,6 @@ export async function criarAnuncio(req, res) {
   }
 }
 
-/**
- * Lista todos os anúncios, com filtros opcionais por query string.
- * Rota sugerida: GET /anuncios?categoriaId=1&cidade=São Paulo&usuarioId=3&status=ativo
- */
 export async function listarAnuncios(req, res) {
   try {
     const { categoriaId, cidade, estado, usuarioId, status, busca } = req.query;
@@ -160,10 +147,6 @@ export async function listarAnuncios(req, res) {
   }
 }
 
-/**
- * Busca um anúncio específico pelo id.
- * Rota sugerida: GET /anuncios/:id
- */
 export async function buscarAnuncio(req, res) {
   try {
     const idAnuncio = Number(req.params.id);
@@ -188,13 +171,6 @@ export async function buscarAnuncio(req, res) {
   }
 }
 
-/**
- * Edita um anúncio existente. Todos os campos são opcionais — só atualiza
- * o que vier no body. Se vier uma foto nova, a antiga é apagada do disco.
- * Rota sugerida: PUT /anuncios/:id
- * Body (multipart/form-data): titulo, descricao, preferencia, categoriaId,
- *   disponibilidade, status, foto (arquivo, opcional)
- */
 export async function atualizarAnuncio(req, res) {
   try {
     const idAnuncio = Number(req.params.id);
@@ -235,7 +211,7 @@ export async function atualizarAnuncio(req, res) {
       return res.status(400).json({ erro: "Informe a preferência de troca." });
     }
 
-    const statusValidos = ["ativo", "vendido", "pausado"];
+    const statusValidos = ["ativo", "vendido", "pausado", "trocado"];
     if (status !== undefined && !statusValidos.includes(status)) {
       if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ erro: "Status inválido. Use: ativo, vendido ou pausado." });

@@ -55,24 +55,14 @@ model Anuncio{
   categoriaId Int
 
   propostas Proposta[]
-}
-
-model Proposta{
-  id Int @id @default(autoincrement())
-  mensagem String
-  status String @default("pendente") 
-  criadoEm DateTime @default(now())
-
-  anuncioId Int
-  anuncio Anuncio @relation(fields: [anuncioId], references: [id])
-
-  propostoPor Int
-  usuario Usuario @relation(fields: [propostoPor], references: [id])
+  mensagem Mensagem[]
+  troca Troca[]
 }
 
 model Mensagem {
   id Int @id @default(autoincrement())
   conteudo String
+  tipo String @default("texto")
   data_hora DateTime @default(now())
 
   remetenteId Int
@@ -80,4 +70,39 @@ model Mensagem {
 
   destinatarioId Int
   destinatario Usuario @relation("MensagensRecebidas", fields: [destinatarioId], references: [id])
+
+  anuncioId Int
+  anuncio Anuncio @relation(fields: [anuncioId], references: [id], onDelete: Cascade)
+}
+
+model Proposta{
+  id Int @id @default(autoincrement())
+  mensagem String
+  status String @default("pendente")
+  criadoEm DateTime @default(now())
+
+  anuncioId Int
+  anuncio Anuncio @relation(fields: [anuncioId], references: [id], onDelete: Cascade)
+
+  propostoPor Int
+  usuario Usuario @relation(fields: [propostoPor], references: [id])
+}
+
+model Troca {
+  id Int @id @default(autoincrement())
+
+  anuncioId Int
+  anuncio Anuncio @relation(fields: [anuncioId], references: [id], onDelete: Cascade)
+
+  usuarioAId Int 
+  usuarioBId Int 
+
+  usuarioAFoto String? 
+  usuarioBFoto String? 
+  finalizada Boolean @default(false)
+
+  criadoEm DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@unique([anuncioId, usuarioBId])
 }

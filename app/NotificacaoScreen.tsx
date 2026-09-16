@@ -16,7 +16,7 @@ import * as Notifications from "expo-notifications";
 import { Ionicons } from "@expo/vector-icons";
 import Flecha from "../components/HeaderFlecha";
 
-const API_URL = "http://172.30.1.2:3000";
+const API_URL = "http://192.168.137.173:3000";
 
 type PropostaRecebida = {
   id: number;
@@ -39,6 +39,17 @@ type PropostaEnviada = {
   };
 };
 
+type TrocaPendente = {
+  anuncioId: number;
+  anuncioTitulo: string;
+  outroUsuarioId: number;
+  outroUsuarioNome: string;
+  outroUsuarioFoto: string | null;
+  minhaFotoEnviada: boolean;
+  fotoDoOutroEnviada: boolean;
+  atualizadoEm: string;
+};
+
 function formatarTempoRelativo(dataISO: string) {
   const agora = new Date();
   const data = new Date(dataISO);
@@ -56,6 +67,11 @@ function formatarTempoRelativo(dataISO: string) {
   return `${diffDias} dias atrás`;
 }
 
+function urlFoto(caminho: string | null) {
+  if (!caminho) return null;
+  return `${API_URL}/${caminho.replace(/\\/g, "/")}`;
+}
+
 const STATUS_INFO: Record<string, { label: string; cor: string }> = {
   pendente: { label: "Pendente", cor: "#FFB800" },
   aceita: { label: "Aceita", cor: "#00FF44" },
@@ -64,10 +80,11 @@ const STATUS_INFO: Record<string, { label: string; cor: string }> = {
 
 export default function Notificacoes() {
   const router = useRouter();
-  const [aba, setAba] = useState<"recebidas" | "enviadas">("recebidas");
+  const [aba, setAba] = useState<"recebidas" | "enviadas" | "trocas">("recebidas");
 
   const [recebidas, setRecebidas] = useState<PropostaRecebida[]>([]);
   const [enviadas, setEnviadas] = useState<PropostaEnviada[]>([]);
+  const [trocas, setTrocas] = useState<TrocaPendente[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [respondendo, setRespondendo] = useState<number | null>(null);
 
@@ -90,16 +107,19 @@ export default function Notificacoes() {
       const usuarioId = await AsyncStorage.getItem("usuarioId");
       if (!usuarioId) return;
 
-      const [respRecebidas, respEnviadas] = await Promise.all([
+      const [respRecebidas, respEnviadas, respTrocas] = await Promise.all([
         fetch(`${API_URL}/propostas/recebidas?usuarioId=${usuarioId}`),
         fetch(`${API_URL}/propostas/enviadas?usuarioId=${usuarioId}`),
+        fetch(`${API_URL}/trocas/pendentes/${usuarioId}`),
       ]);
 
       const dadosRecebidas = await respRecebidas.json();
       const dadosEnviadas = await respEnviadas.json();
+      const dadosTrocas = await respTrocas.json();
 
       if (respRecebidas.ok) setRecebidas(dadosRecebidas.propostas);
       if (respEnviadas.ok) setEnviadas(dadosEnviadas.propostas);
+      if (respTrocas.ok) setTrocas(dadosTrocas.trocas);
     } catch (erro) {
       console.log(erro);
     } finally {
@@ -140,6 +160,16 @@ export default function Notificacoes() {
     );
   }
 
+  function abrirFinalizacao(troca: TrocaPendente) {
+    router.push({
+      pathname: "/finalizacaoTroca",
+      params: {
+        anuncioId: String(troca.anuncioId),
+        outroUsuarioId: String(troca.outroUsuarioId),
+      },
+    });
+  }
+
   const pendentesRecebidas = recebidas.filter((p) => p.status === "pendente");
   const respondidasRecebidas = recebidas.filter((p) => p.status !== "pendente");
 
@@ -148,10 +178,7 @@ export default function Notificacoes() {
       <View key={item.id} style={[styles.card, item.status === "pendente" && styles.cardNaoLida]}>
         <View style={styles.cardTopoLinha}>
           {item.usuario.foto ? (
-            <Image
-              source={{ uri: `${API_URL}/${item.usuario.foto.replace(/\\/g, "/")}` }}
-              style={styles.avatar}
-            />
+            <Image source={{ uri: urlFoto(item.usuario.foto)! }} style={styles.avatar} />
           ) : (
             <View style={styles.avatar} />
           )}
@@ -210,10 +237,7 @@ export default function Notificacoes() {
       <View key={item.id} style={styles.card}>
         <View style={styles.cardTopoLinha}>
           {item.anuncio.usuario.foto ? (
-            <Image
-              source={{ uri: `${API_URL}/${item.anuncio.usuario.foto.replace(/\\/g, "/")}` }}
-              style={styles.avatar}
-            />
+            <Image source={{ uri: urlFoto(item.anuncio.usuario.foto)! }} style={styles.avatar} />
           ) : (
             <View style={styles.avatar} />
           )}
@@ -235,6 +259,49 @@ export default function Notificacoes() {
           </Text>
         </View>
       </View>
+    );
+  }
+
+  function renderTroca(item: TrocaPendente) {
+    // Texto de status do ponto de vista de quem está olhando a tela
+    let statusTexto = "";
+    let statusCor = "#FFB800";
+
+    if (item.minhaFotoEnviada && !item.fotoDoOutroEnviada) {
+      statusTexto = `Aguardando ${item.outroUsuarioNome} enviar a foto`;
+      statusCor = "#FFB800";
+    } else if (!item.minhaFotoEnviada) {
+      statusTexto = "Toque para enviar sua foto do serviço";
+      statusCor = "#00AFFF";
+    }
+
+    return (
+      <TouchableOpacity key={`${item.anuncioId}-${item.outroUsuarioId}`} style={styles.card} onPress={() => abrirFinalizacao(item)}>
+        <View style={styles.cardTopoLinha}>
+          {item.outroUsuarioFoto ? (
+            <Image source={{ uri: urlFoto(item.outroUsuarioFoto)! }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatar} />
+          )}
+
+          <View style={styles.cardTexto}>
+            <View style={styles.cardTopo}>
+              <Text style={styles.cardTitulo} numberOfLines={1}>
+                Finalizar troca com {item.outroUsuarioNome}
+              </Text>
+              {!item.minhaFotoEnviada && <View style={styles.dot} />}
+            </View>
+            <Text style={styles.cardDescricao} numberOfLines={2}>
+              Anúncio: "{item.anuncioTitulo}"
+            </Text>
+            <Text style={styles.cardData}>{formatarTempoRelativo(item.atualizadoEm)}</Text>
+          </View>
+        </View>
+
+        <View style={[styles.badgeStatus, { backgroundColor: `${statusCor}22` }]}>
+          <Text style={{ color: statusCor, fontWeight: "600", fontSize: 13 }}>{statusTexto}</Text>
+        </View>
+      </TouchableOpacity>
     );
   }
 
@@ -272,6 +339,15 @@ export default function Notificacoes() {
             Enviadas
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.tab, aba === "trocas" && styles.tabAtiva]}
+          onPress={() => setAba("trocas")}
+        >
+          <Text style={[styles.tabTexto, aba === "trocas" && styles.tabTextoAtivo]}>
+            Trocas
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -302,16 +378,28 @@ export default function Notificacoes() {
               )}
             </>
           )
-        ) : enviadas.length === 0 ? (
+        ) : aba === "enviadas" ? (
+          enviadas.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="paper-plane-outline" size={40} color="#444" />
+              <Text style={styles.emptyTitulo}>Nenhuma proposta enviada</Text>
+              <Text style={styles.emptyTexto}>
+                As propostas que você enviar vão aparecer aqui.
+              </Text>
+            </View>
+          ) : (
+            enviadas.map(renderEnviada)
+          )
+        ) : trocas.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="paper-plane-outline" size={40} color="#444" />
-            <Text style={styles.emptyTitulo}>Nenhuma proposta enviada</Text>
+            <Ionicons name="checkmark-done-circle-outline" size={40} color="#444" />
+            <Text style={styles.emptyTitulo}>Nenhuma troca em andamento</Text>
             <Text style={styles.emptyTexto}>
-              As propostas que você enviar vão aparecer aqui.
+              Trocas aguardando confirmação de foto vão aparecer aqui.
             </Text>
           </View>
         ) : (
-          enviadas.map(renderEnviada)
+          trocas.map(renderTroca)
         )}
 
         <View style={{ height: 40 }} />
@@ -349,7 +437,7 @@ const styles = StyleSheet.create({
   tabs: {
     flexDirection: "row",
     paddingHorizontal: 20,
-    gap: 10,
+    gap: 8,
     marginBottom: 10,
   },
   tab: {
@@ -367,6 +455,7 @@ const styles = StyleSheet.create({
   tabTexto: {
     color: "#9CA3AF",
     fontWeight: "600",
+    fontSize: 13,
   },
   tabTextoAtivo: {
     color: "#000",

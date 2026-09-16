@@ -15,8 +15,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/HeaderEscolha";
+import { adicionarAoHistorico } from "@/src/utils/historico";
 
-const API_URL = "http://172.30.1.2:3000";
+const API_URL = "http://192.168.137.173:3000";
 
 type Anuncio = {
   id: number;
@@ -28,6 +29,7 @@ type Anuncio = {
   status: string;
   cidade: string | null;
   estado: string | null;
+  criadoEm: string;
   usuario: {
     id: number;
     nome: string;
@@ -76,6 +78,8 @@ export default function AnuncioScreen() {
 
       if (resposta.ok) {
         setAnuncio(dados.anuncio);
+
+        adicionarAoHistorico(dados.anuncio);
       } else {
         setErro(true);
       }
