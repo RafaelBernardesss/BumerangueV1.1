@@ -32,6 +32,7 @@
       "plugins": [
         "expo-router",
         [
+          
           "expo-splash-screen",
           {
             "image": "./assets/images/splash-icon.png",
@@ -59,7 +60,11 @@
           }
         ],
         "expo-font",
-        "expo-web-browser"
+        "expo-web-browser",
+        "expo-image-picker",
+        {
+          "photosPermission": "O Bumerangue precisa acessar suas fotos para enviar imagens no chat de serviço."
+        }
       ],
       "experiments": {
         "typedRoutes": true,

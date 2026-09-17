@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_URL = "http://192.168.137.173:3000";
 
@@ -25,8 +26,22 @@ export default function FinalizacaoTroca() {
   const params = useLocalSearchParams();
 
   const anuncioId = params.anuncioId as string;
-  const meuUsuarioId = params.usuarioId as string;
   const outroUsuarioId = params.outroUsuarioId as string;
+
+  const [meuUsuarioId, setMeuUsuarioId] = useState<string | null>(null);
+
+  useEffect(()=>{
+    async function CarregarUsuarioLogado() {
+      try{
+
+        const id = await AsyncStorage.getItem("usuarioId");
+        if(id) setMeuUsuarioId(id);
+      }catch(error){
+        console.log("Erro ao carregr usuario logado :", error)
+      }
+    }
+    CarregarUsuarioLogado();
+  }, []);
 
   const [minhaFoto, setMinhaFoto] = useState<string | null>(null);
   const [fotoDoOutro, setFotoDoOutro] = useState<string | null>(null);
@@ -35,6 +50,9 @@ export default function FinalizacaoTroca() {
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
+
+    if(!meuUsuarioId) return;
+
     async function carregarStatus() {
       try {
         const resposta = await fetch(
