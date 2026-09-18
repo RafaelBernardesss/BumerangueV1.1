@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/HeaderEscolha";
 import { adicionarAoHistorico } from "@/src/utils/historico";
 
-const API_URL = "http://192.168.18.7:3000";
+const API_URL = "http://172.30.1.72:3000";
 
 type Anuncio = {
   id: number;
@@ -41,8 +41,6 @@ type Anuncio = {
   };
 };
 
-// Mock dos serviços do próprio usuário logado, que podem ser oferecidos em troca.
-// TODO: substituir por dados reais vindos da API/perfil do usuário.
 const MEUS_SERVICOS = [
   { id: "m1", nome: "Edição de Vídeos Curtos" },
   { id: "m2", nome: "Criação de Posts para Instagram" },
@@ -96,49 +94,62 @@ export default function AnuncioScreen() {
     return item.cidade || item.estado || "Localização não informada";
   }
 
- async function enviarProposta() {
-  
-  if (!propostaTexto.trim()) {
-    Alert.alert("Escreva sua proposta", "Digite os detalhes da sua proposta de troca.");
-    return;
-  }
-
-  if (!anuncio) return;
-
-  try {
-    setEnviando(true);
-
-    const propostoPor = await AsyncStorage.getItem("usuarioId");
-    if (!propostoPor) {
-      Alert.alert("Sessão expirada", "Faça login novamente.");
+  async function enviarProposta() {
+    if (!propostaTexto.trim()) {
+      Alert.alert("Escreva sua proposta", "Digite os detalhes da sua proposta de troca.");
       return;
     }
 
-    const resposta = await fetch(`${API_URL}/propostas`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        anuncioId: anuncio.id,
-        propostoPor: Number(propostoPor),
-        mensagem: propostaTexto.trim(),
-      }),
-    });
+    if (!anuncio) return;
 
-    const dados = await resposta.json();
+    try {
+      setEnviando(true);
 
-    if (!resposta.ok) {
-      throw new Error(dados.erro || "Não foi possível enviar a proposta.");
+      const propostoPor = await AsyncStorage.getItem("usuarioId");
+      if (!propostoPor) {
+        Alert.alert("Sessão expirada", "Faça login novamente.");
+        return;
+      }
+
+      // Impede o usuário de mandar proposta no próprio anúncio
+      if (anuncio.usuario.id === Number(propostoPor)) {
+        Alert.alert(
+          "Ação não permitida",
+          "Você não pode enviar proposta no seu próprio anúncio."
+        );
+        return;
+      }
+
+      // Junta a proposta com a mensagem opcional, para nada se perder
+      const mensagemFinal = [propostaTexto.trim(), mensagem.trim()]
+        .filter(Boolean)
+        .join("\n\n");
+
+      const resposta = await fetch(`${API_URL}/propostas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          anuncioId: anuncio.id,
+          propostoPor: Number(propostoPor),
+          mensagem: mensagemFinal,
+        }),
+      });
+
+      const dados = await resposta.json();
+
+      if (!resposta.ok) {
+        throw new Error(dados.erro || "Não foi possível enviar a proposta.");
+      }
+
+      Alert.alert("Proposta enviada", "Sua proposta foi enviada com sucesso!", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (erro: any) {
+      Alert.alert("Erro", erro.message || "Não foi possível conectar ao servidor.");
+    } finally {
+      setEnviando(false);
     }
-
-    Alert.alert("Proposta enviada", "Sua proposta foi enviada com sucesso!", [
-      { text: "OK", onPress: () => router.back() },
-    ]);
-  } catch (erro: any) {
-    Alert.alert("Erro", erro.message || "Não foi possível conectar ao servidor.");
-  } finally {
-    setEnviando(false);
   }
-}
 
   if (carregando) {
     return (

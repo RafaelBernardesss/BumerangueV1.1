@@ -19,8 +19,6 @@ import Flecha from "../components/HeaderFlecha";
 export default function Cadastro() {
   const router = useRouter();
 
-  const [menuAberto, setMenuAberto] = useState(false);
-
   const [cpf, setCpf] = useState("");
 
   const [senha, setSenha] = useState("");
@@ -51,7 +49,7 @@ export default function Cadastro() {
   async function fazerLogin() {
     try {
       const response = await fetch(
-        "http://192.168.137.173:3000/usuarios/login",
+        "http://172.30.1.72:3000/usuarios/login",
         {
           method: "POST",
           headers: {
@@ -72,7 +70,7 @@ export default function Cadastro() {
         // Mantém o objeto completo também, caso precise em outras telas
         await AsyncStorage.setItem("usuarioLogado", JSON.stringify(data.usuario));
 
-        // 👇 registra o token de notificação push desse usuário
+       
         await registrarPushToken();
 
         Alert.alert("Sucesso", "Login realizado!");

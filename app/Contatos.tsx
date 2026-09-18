@@ -1,31 +1,31 @@
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
   Image,
+  StyleSheet,
+  Text,
   TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
 
-
-const API_URL = "http://192.168.18.7:3000";
+const API_URL = "http://172.30.1.72:3000";
 
 type Contato = {
   id: number;
+  anuncioId: number;
   nome: string;
   foto: string | null;
+  online: boolean;
   ultimaMensagem: string | null;
   horaUltimaMensagem: string | null;
   naoLidas: number;
-  online: boolean;
-  favorito: boolean;
 };
 
 // Monta a URL completa da foto a partir do caminho relativo salvo no banco
@@ -34,17 +34,13 @@ function urlFoto(caminho: string | null) {
   return `${API_URL}/${caminho.replace(/\\/g, "/")}`;
 }
 
-type Filtro = "todos" | "favoritos" | "naoLidos";
-
 export default function Contatos() {
   const router = useRouter();
 
-  const [busca, setBusca] = useState("");
-  const [filtro, setFiltro] = useState<Filtro>("todos");
   const [contatos, setContatos] = useState<Contato[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [busca, setBusca] = useState("");
 
-  // GET /contatos (ou /usuarios/:id/contatos, ajuste conforme a rota real do backend)
   useFocusEffect(
     useCallback(() => {
       async function buscarContatos() {
@@ -58,6 +54,7 @@ export default function Contatos() {
           const dados = await resposta.json();
 
           if (resposta.ok) {
+            console.log("CONTATOS RECEBIDOS:", dados.contatos); // TEMP - remover depois
             setContatos(dados.contatos || []);
           } else {
             console.log(dados.erro);
@@ -73,16 +70,11 @@ export default function Contatos() {
     }, [])
   );
 
-  const contatosFiltrados = contatos
-    .filter((c) => c.nome.toLowerCase().includes(busca.toLowerCase()))
-    .filter((c) => {
-      if (filtro === "favoritos") return c.favorito;
-      if (filtro === "naoLidos") return c.naoLidas > 0;
-      return true;
-    });
+  const contatosFiltrados = contatos.filter((c) =>
+    c.nome.toLowerCase().includes(busca.toLowerCase())
+  );
 
-  // Iniciais pra usar como fallback quando não há foto
-  function iniciaisDe(nome: string) {
+  function renderIniciais(nome: string) {
     return nome
       .split(" ")
       .filter(Boolean)
@@ -91,176 +83,124 @@ export default function Contatos() {
       .join("");
   }
 
+  function abrirChat(item: Contato) {
+    if (!item.anuncioId) {
+      console.warn(
+        "Contato sem anuncioId — verifique o backend /usuarios/:id/contatos",
+        item
+      );
+      return;
+    }
+
+    router.push({
+      pathname: "/Chat",
+      params: {
+        id: String(item.id),
+        anuncioId: String(item.anuncioId),
+        nome: item.nome,
+        foto: item.foto ?? "",
+      },
+    });
+  }
+
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* CABEÇALHO */}
-        <View style={styles.headerRow}>
-          <Header></Header>
-        </View>
+      {/* CABEÇALHO */}
+      <View style={styles.headerRow}>
+        <Header></Header>
+      </View>
 
-        {/* TÍTULO */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.title}>Contatos</Text>
-          <Text style={styles.subtitle}>
-            Converse com quem já trocou serviços com você.
+      {/* TÍTULO */}
+      <View style={styles.titleContainer}>
+        <Text style={styles.title}>Contatos</Text>
+        <Text style={styles.subtitle}>
+          Converse com quem já negociou serviços com você.
+        </Text>
+      </View>
+
+      {/* BUSCA */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={20} color="#666" />
+          <TextInput
+            style={styles.input}
+            placeholder="Buscar contato..."
+            placeholderTextColor="#666"
+            value={busca}
+            onChangeText={setBusca}
+          />
+        </View>
+      </View>
+
+      {/* LISTA DE CONTATOS */}
+      {carregando ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator color="#00AFFF" />
+          <Text style={styles.emptyText}>Carregando seus contatos...</Text>
+        </View>
+      ) : contatosFiltrados.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="people-outline" size={32} color="#444" />
+          <Text style={styles.emptyText}>
+            {busca
+              ? "Nenhum contato encontrado"
+              : "Você ainda não tem contatos"}
           </Text>
         </View>
+      ) : (
+        <FlatList
+          data={contatosFiltrados}
+          keyExtractor={(item) => item.id.toString()}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+          renderItem={({ item }) => {
+            const foto = urlFoto(item.foto);
 
-        {/* BUSCA */}
-        <View style={styles.searchRow}>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={20} color="#666" />
-            <TextInput
-              style={styles.input}
-              placeholder="Buscar contato..."
-              placeholderTextColor="#666"
-              value={busca}
-              onChangeText={setBusca}
-            />
-          </View>
-        </View>
+            return (
+              <TouchableOpacity
+                style={styles.contactCard}
+                activeOpacity={0.8}
+                onPress={() => abrirChat(item)}
+              >
+                <View style={styles.avatarWrapper}>
+                  {foto ? (
+                    <Image source={{ uri: foto }} style={styles.avatar} />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Text style={styles.avatarPlaceholderText}>
+                        {renderIniciais(item.nome) || "?"}
+                      </Text>
+                    </View>
+                  )}
+                  {item.online && <View style={styles.online} />}
+                </View>
 
-        {/* FILTROS */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filtrosRow}
-          contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}
-        >
-          <TouchableOpacity
-            style={[styles.filtroChip, filtro === "todos" && styles.filtroChipAtivo]}
-            onPress={() => setFiltro("todos")}
-          >
-            <Text
-              style={[
-                styles.filtroText,
-                filtro === "todos" && styles.filtroTextAtivo,
-              ]}
-            >
-              Todos
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filtroChip,
-              filtro === "naoLidos" && styles.filtroChipAtivo,
-            ]}
-            onPress={() => setFiltro("naoLidos")}
-          >
-            <Text
-              style={[
-                styles.filtroText,
-                filtro === "naoLidos" && styles.filtroTextAtivo,
-              ]}
-            >
-              Não lidos
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.filtroChip,
-              filtro === "favoritos" && styles.filtroChipAtivo,
-            ]}
-            onPress={() => setFiltro("favoritos")}
-          >
-            <Text
-              style={[
-                styles.filtroText,
-                filtro === "favoritos" && styles.filtroTextAtivo,
-              ]}
-            >
-              Favoritos
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* LISTA DE CONTATOS */}
-        <View style={styles.listContainer}>
-          {carregando ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Carregando contatos...</Text>
-            </View>
-          ) : contatosFiltrados.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="people-outline" size={32} color="#444" />
-              <Text style={styles.emptyText}>Nenhum contato encontrado</Text>
-            </View>
-          ) : (
-            contatosFiltrados.map((item) => {
-              const foto = urlFoto(item.foto);
-
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.contatoCard}
-                  activeOpacity={0.8}
-                  onPress={() => router.push(`/Chat?id=${item.id}`)}
-                >
-                  <View style={styles.avatarWrapper}>
-                    {foto ? (
-                      <Image source={{ uri: foto }} style={styles.avatar} />
-                    ) : (
-                      <View style={styles.avatarPlaceholder}>
-                        <Text style={styles.avatarPlaceholderText}>
-                          {iniciaisDe(item.nome) || "?"}
-                        </Text>
-                      </View>
+                <View style={styles.contactInfo}>
+                  <View style={styles.contactTopRow}>
+                    <Text style={styles.contactName} numberOfLines={1}>
+                      {item.nome}
+                    </Text>
+                    {item.horaUltimaMensagem && (
+                      <Text style={styles.contactTime}>
+                        {item.horaUltimaMensagem}
+                      </Text>
                     )}
-                    {item.online && <View style={styles.online} />}
                   </View>
+                  <Text style={styles.contactMessage} numberOfLines={1}>
+                    {item.ultimaMensagem || "Diga olá e comece a negociar!"}
+                  </Text>
+                </View>
 
-                  <View style={styles.contatoInfo}>
-                    <View style={styles.contatoTopRow}>
-                      <Text style={styles.contatoNome} numberOfLines={1}>
-                        {item.nome}
-                      </Text>
-                      {item.horaUltimaMensagem && (
-                        <Text style={styles.contatoHora}>
-                          {item.horaUltimaMensagem}
-                        </Text>
-                      )}
-                    </View>
-
-                    <View style={styles.contatoBottomRow}>
-                      <Text
-                        style={[
-                          styles.contatoMensagem,
-                          item.naoLidas > 0 && styles.contatoMensagemNaoLida,
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {item.ultimaMensagem || "Diga olá e comece a conversar"}
-                      </Text>
-
-                      {item.naoLidas > 0 && (
-                        <View style={styles.badge}>
-                          <Text style={styles.badgeText}>
-                            {item.naoLidas > 9 ? "9+" : item.naoLidas}
-                          </Text>
-                        </View>
-                      )}
-
-                      {item.favorito && (
-                        <Ionicons
-                          name="star"
-                          size={16}
-                          color="#FFB800"
-                          style={{ marginLeft: 6 }}
-                        />
-                      )}
-                    </View>
+                {item.naoLidas > 0 && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{item.naoLidas}</Text>
                   </View>
-                </TouchableOpacity>
-              );
-            })
-          )}
-        </View>
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
+                )}
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
 
       {/* MENU INFERIOR */}
       <View style={styles.bottomBar}>
@@ -319,7 +259,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 20,
     marginTop: 20,
-    gap: 10,
+    marginBottom: 10,
   },
   searchBox: {
     flex: 1,
@@ -330,46 +270,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     alignItems: "center",
     flexDirection: "row",
-    backgroundColor: "#0D1324",
   },
   input: {
     flex: 1,
     color: "#fff",
     marginLeft: 10,
   },
-  filtrosRow: {
-    marginTop: 20,
-  },
-  filtroChip: {
-    borderWidth: 1,
-    borderColor: "#222",
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    backgroundColor: "#0D1324",
-  },
-  filtroChipAtivo: {
-    backgroundColor: "#00AFFF",
-    borderColor: "#00AFFF",
-  },
-  filtroText: {
-    color: "#999",
-    fontWeight: "600",
-  },
-  filtroTextAtivo: {
-    color: "#000",
-  },
-  listContainer: {
-    marginTop: 25,
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  contatoCard: {
+  contactCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#0D1324",
     borderRadius: 18,
     padding: 14,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: "#161D2E",
   },
@@ -406,59 +319,52 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#0D1324",
   },
-  contatoInfo: {
+  contactInfo: {
     flex: 1,
     marginLeft: 14,
   },
-  contatoTopRow: {
+  contactTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  contatoNome: {
+  contactName: {
     color: "#fff",
     fontSize: 17,
     fontWeight: "600",
-    flex: 1,
+    flexShrink: 1,
     marginRight: 8,
   },
-  contatoHora: {
+  contactTime: {
     color: "#666",
     fontSize: 12,
   },
-  contatoBottomRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-  },
-  contatoMensagem: {
+  contactMessage: {
     color: "#888",
+    marginTop: 4,
     fontSize: 14,
-    flex: 1,
-  },
-  contatoMensagemNaoLida: {
-    color: "#ccc",
-    fontWeight: "600",
   },
   badge: {
     backgroundColor: "#00AFFF",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    paddingHorizontal: 5,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 6,
     marginLeft: 8,
   },
   badgeText: {
     color: "#000",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "bold",
   },
   emptyState: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 60,
+    gap: 10,
   },
   emptyText: {
     color: "#555",

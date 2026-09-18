@@ -112,6 +112,11 @@ class TrocaController {
   try {
     const usuarioId = Number(req.params.usuarioId);
 
+    if (!prisma || !prisma.troca || typeof prisma.troca.findMany !== "function") {
+      console.error("Prisma model 'troca' não disponível. Verifique se 'prisma generate' foi executado.");
+      return res.status(500).json({ erro: "Prisma model 'troca' não disponível. Execute 'npx prisma generate'." });
+    }
+
     const trocas = await prisma.troca.findMany({
       where: {
         finalizada: false,

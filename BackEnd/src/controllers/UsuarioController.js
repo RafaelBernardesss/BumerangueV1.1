@@ -486,19 +486,36 @@ export async function listarContatos(req, res) {
       orderBy: { criadoEm: "desc" },
     });
 
+    // Usamos um mapa para garantir contatos únicos e armazenamos também o anuncioId
     const mapaContatos = new Map();
 
     for (const proposta of comoAnunciante) {
       const outraPessoa = proposta.usuario;
       if (outraPessoa.id !== idUsuario) {
-        mapaContatos.set(outraPessoa.id, outraPessoa);
+        // guarda o anuncioId da proposta mais recente para esse contato
+        mapaContatos.set(outraPessoa.id, {
+          id: outraPessoa.id,
+          nome: outraPessoa.nome,
+          foto: outraPessoa.foto,
+          anuncioId: proposta.anuncioId,
+          criadoEm: proposta.criadoEm,
+        });
       }
     }
 
     for (const proposta of comoProponente) {
       const outraPessoa = proposta.anuncio.usuario;
       if (outraPessoa.id !== idUsuario) {
-        mapaContatos.set(outraPessoa.id, outraPessoa);
+        // Se já temos esse contato, preferimos a proposta mais recente (ordem já é por criadoEm desc)
+        if (!mapaContatos.has(outraPessoa.id)) {
+          mapaContatos.set(outraPessoa.id, {
+            id: outraPessoa.id,
+            nome: outraPessoa.nome,
+            foto: outraPessoa.foto,
+            anuncioId: proposta.anuncioId,
+            criadoEm: proposta.criadoEm,
+          });
+        }
       }
     }
 
@@ -506,6 +523,7 @@ export async function listarContatos(req, res) {
       id: usuario.id,
       nome: usuario.nome,
       foto: usuario.foto,
+      anuncioId: usuario.anuncioId || null,
       ultimaMensagem: null,
       horaUltimaMensagem: null,
       naoLidas: 0,

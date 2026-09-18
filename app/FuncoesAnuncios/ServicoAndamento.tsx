@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import HeaderFlecha from '../../components/HeaderFlecha';
 
-export default function ServicoRealizado() {
+export default function ServicoAndamento() {
     return(
         <View>
             <HeaderFlecha/>
@@ -16,6 +16,4 @@ export default function ServicoRealizado() {
     );
 }
 
-const styles = StyleSheet.create({
-
-})
+const styles = StyleSheet.create({})

@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
 import { buscarHistorico, limparHistorico, ItemHistorico } from "../src/utils/historico";
 
-const API_URL = "http://192.168.18.7:3000"; // mesmo IP usado nas outras telas
+const API_URL = "http://172.30.1.72:3000";
 
 function urlFoto(caminho: string | null) {
   if (!caminho) return null;
@@ -36,7 +36,7 @@ export default function HistoricoServico() {
   const [historico, setHistorico] = useState<ItemHistorico[]>([]);
   const [carregando, setCarregando] = useState(true);
 
-  // Recarrega toda vez que a tela ganha foco, pra refletir cliques recentes
+  
   useFocusEffect(
     useCallback(() => {
       async function carregar() {

@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://192.168.18.7:3000";
+const API_URL = "http://172.30.1.72:3000";
 
 function urlFoto(caminho: string | null) {
   if (!caminho) return null;

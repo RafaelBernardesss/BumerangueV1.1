@@ -4,7 +4,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-const API_URL = "http://192.168.18.7:3000";
+const API_URL = "http://172.30.1.72:3000";
 
 export async function registrarPushToken() {
   try {

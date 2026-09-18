@@ -1,5 +1,5 @@
-import prisma from "../prisma/Client.js";
 import bcrypt from "bcrypt";
+import prisma from "../prisma/Client.js";
 
 class LoginController {
   async login(req, res) {
@@ -23,13 +23,27 @@ class LoginController {
         where: { cpf: cpfLimpo },
       });
 
-        const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
-
       // Verificar se encontrou usuário
-      if (!usuario || !senhaCorreta) {
+      if (!usuario) {
         return res.status(401).json({
           erro: "CPF ou senha inválidos",
         });
+      }
+
+      // Suporta senhas armazenadas em texto puro ou bcrypt
+      let senhaCorreta = false;
+      try {
+        if (typeof usuario.senha === "string" && usuario.senha.startsWith("$2")) {
+          senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+        } else {
+          senhaCorreta = senha === usuario.senha;
+        }
+      } catch (e) {
+        senhaCorreta = false;
+      }
+
+      if (!senhaCorreta) {
+        return res.status(401).json({ erro: "CPF ou senha inválidos" });
       }
 
       // Remove a senha antes de devolver o usuário para o front-end

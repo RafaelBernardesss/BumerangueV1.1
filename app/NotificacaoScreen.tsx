@@ -1,22 +1,23 @@
-import React, { useCallback, useEffect, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Alert,
   Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
-import { Ionicons } from "@expo/vector-icons";
 import Flecha from "../components/HeaderFlecha";
 
-const API_URL = "http://192.168.18.7:3000";
+const API_URL = "http://172.30.1.72:3000";
+
+const INTERVALO_ATUALIZACAO = 10000;
 
 type PropostaRecebida = {
   id: number;
@@ -88,40 +89,61 @@ export default function Notificacoes() {
   const [carregando, setCarregando] = useState(true);
   const [respondendo, setRespondendo] = useState<number | null>(null);
 
+  // Carrega ao entrar na tela e busca novidades a cada 10 segundos.
+  // Ao sair da tela, o intervalo é cancelado.
   useFocusEffect(
     useCallback(() => {
       carregarTudo();
+      const intervalo = setInterval(() => carregarTudo(true), INTERVALO_ATUALIZACAO);
+      return () => clearInterval(intervalo);
     }, [])
   );
 
-  useEffect(() => {
-    const listener = Notifications.addNotificationReceivedListener(() => {
-      carregarTudo();
-    });
-    return () => listener.remove();
-  }, []);
-
-  async function carregarTudo() {
+  // Busca uma rota e devolve o JSON, ou null se ela falhar.
+  // Assim, uma rota com problema não derruba as outras duas.
+  async function buscarRota(nome: string, url: string) {
     try {
-      setCarregando(true);
-      const usuarioId = await AsyncStorage.getItem("usuarioId");
-      if (!usuarioId) return;
+      const resposta = await fetch(url);
+      const texto = await resposta.text();
 
-      const [respRecebidas, respEnviadas, respTrocas] = await Promise.all([
-        fetch(`${API_URL}/propostas/recebidas?usuarioId=${usuarioId}`),
-        fetch(`${API_URL}/propostas/enviadas?usuarioId=${usuarioId}`),
-        fetch(`${API_URL}/trocas/pendentes/${usuarioId}`),
+      if (!resposta.ok) {
+        console.log(`[${nome}] erro ${resposta.status}:`, texto.slice(0, 120));
+        return null;
+      }
+
+      try {
+        return JSON.parse(texto);
+      } catch {
+        console.log(`[${nome}] a resposta não é JSON:`, texto.slice(0, 120));
+        return null;
+      }
+    } catch (erro) {
+      console.log(`[${nome}] falha de conexão:`, erro);
+      return null;
+    }
+  }
+
+  // silencioso = true: atualiza a lista sem mostrar o spinner de carregamento
+  async function carregarTudo(silencioso = false) {
+    try {
+      if (!silencioso) setCarregando(true);
+      const usuarioId = await AsyncStorage.getItem("usuarioId");
+      if (!usuarioId) {
+        console.log("Notificações: usuarioId não encontrado no AsyncStorage");
+        return;
+      }
+
+      const [dadosRecebidas, dadosEnviadas, dadosTrocas] = await Promise.all([
+        buscarRota("recebidas", `${API_URL}/propostas/recebidas?usuarioId=${usuarioId}`),
+        buscarRota("enviadas", `${API_URL}/propostas/enviadas?usuarioId=${usuarioId}`),
+        buscarRota("trocas", `${API_URL}/troca/pendentes/${usuarioId}`),
       ]);
 
-      const dadosRecebidas = await respRecebidas.json();
-      const dadosEnviadas = await respEnviadas.json();
-      const dadosTrocas = await respTrocas.json();
-
-      if (respRecebidas.ok) setRecebidas(dadosRecebidas.propostas);
-      if (respEnviadas.ok) setEnviadas(dadosEnviadas.propostas);
-      if (respTrocas.ok) setTrocas(dadosTrocas.trocas);
+      if (dadosRecebidas) setRecebidas(dadosRecebidas.propostas ?? []);
+      if (dadosEnviadas) setEnviadas(dadosEnviadas.propostas ?? []);
+      if (dadosTrocas) setTrocas(dadosTrocas.trocas ?? []);
     } catch (erro) {
-      console.log(erro);
+      console.log("Erro carregarTudo:", erro);
     } finally {
       setCarregando(false);
     }
@@ -141,6 +163,9 @@ export default function Notificacoes() {
       }
 
       setRecebidas((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
+
+      // Ao aceitar, a troca nova precisa aparecer na aba "Trocas"
+      carregarTudo(true);
     } catch (erro: any) {
       Alert.alert("Erro", erro.message || "Não foi possível conectar ao servidor.");
     } finally {

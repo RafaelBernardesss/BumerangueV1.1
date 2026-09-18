@@ -1,22 +1,22 @@
-import React, { useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  FlatList,
-  Image,
-  ActivityIndicator,
-  RefreshControl,
-  Alert,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
+import React, { useCallback, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import Flecha from "../../components/HeaderFlecha";
 
-const API_URL = "http://192.168.18.7:3000";
+const API_URL = "http://172.30.1.72:3000";
 
 type Anuncio = {
   id: number;
@@ -38,6 +38,8 @@ const STATUS_LABEL: Record<string, { label: string; cor: string }> = {
   ativo: { label: "Ativo", cor: "#00FF44" },
   pausado: { label: "Pausado", cor: "#FFB800" },
   vendido: { label: "Concluído", cor: "#888" },
+  em_andamento: { label: "Em andamento", cor: "#00AFFF" },
+  trocado: { label: "Trocado", cor: "#00FF44" },
 };
 
 export default function MeusAnuncios() {
@@ -65,9 +67,11 @@ export default function MeusAnuncios() {
       const dados = await resposta.json();
 
       if (resposta.ok) {
-        // Anúncios "em_andamento" (proposta aceita) não aparecem mais aqui
+        // Mostrar anúncios que estão em andamento ou já foram trocados para mantê-los visíveis
         setAnuncios(
-          (dados.anuncios as Anuncio[]).filter((a) => a.status !== "em_andamento")
+          (dados.anuncios as Anuncio[]).filter((a) =>
+            a.status === "em_andamento" || a.status === "trocado"
+          )
         );
       } else {
         Alert.alert("Erro", "Não foi possível carregar seus anúncios.");

@@ -18,7 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 
-const API_URL = "http://192.168.18.7:3000";
+const API_URL = "http://172.30.1.72:3000";
 
 type Mensagem = {
   id: number;
@@ -95,13 +95,19 @@ export default function Chat() {
   }, [outroUsuarioId]);
 
   useEffect(() => {
-    if (!meuUsuarioId || !anuncioId) return;
+    if (!meuUsuarioId || !anuncioId || !outroUsuarioId) return;
 
     async function carregarMensagens() {
       try {
         const resposta = await fetch(
           `${API_URL}/mensagens/${anuncioId}/${meuUsuarioId}/${outroUsuarioId}`
         );
+
+        if (!resposta.ok) {
+          console.error("Erro ao buscar mensagens: status", resposta.status);
+          return;
+        }
+
         const dados = await resposta.json();
 
         const formatadas: Mensagem[] = dados.map((m: any) => ({
@@ -133,25 +139,46 @@ export default function Chat() {
   }, [meuUsuarioId, outroUsuarioId, anuncioId]);
 
   async function enviarMensagem() {
-    if (!texto.trim() || !meuUsuarioId || !anuncioId) return;
+    if (!texto.trim()) {
+      Alert.alert("Digite uma mensagem", "Escreva algo antes de enviar.");
+      return;
+    }
+
+    if (!meuUsuarioId) {
+      Alert.alert("Sessão expirada", "Faça login novamente.");
+      return;
+    }
+
+    if (!anuncioId || !outroUsuarioId) {
+      Alert.alert("Erro", "Dados da conversa incompletos.");
+      return;
+    }
 
     const conteudo = texto.trim();
     setTexto("");
 
     try {
+      const payload = {
+        conteudo,
+        tipo: "texto",
+        remetenteId: meuUsuarioId,
+        destinatarioId: Number(outroUsuarioId),
+        anuncioId: Number(anuncioId),
+      };
+
       const resposta = await fetch(`${API_URL}/mensagens`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          conteudo,
-          tipo: "texto",
-          remetenteId: meuUsuarioId,
-          destinatarioId: Number(outroUsuarioId),
-          anuncioId: Number(anuncioId),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const mensagemCriada = await resposta.json();
+
+      if (!resposta.ok) {
+        console.error("Erro ao enviar mensagem", resposta.status, mensagemCriada);
+        Alert.alert("Erro ao enviar mensagem", mensagemCriada.erro || "Tente novamente mais tarde.");
+        return;
+      }
 
       const novaMensagem: Mensagem = {
         id: mensagemCriada.id,
@@ -166,8 +193,9 @@ export default function Chat() {
 
       setMensagens((mensagensAtuais) => [...mensagensAtuais, novaMensagem]);
       irParaUltimaMensagem(true);
-    } catch (erro) {
+    } catch (erro: any) {
       console.error("Erro ao enviar mensagem:", erro);
+      Alert.alert("Erro", erro.message || "Não foi possível conectar ao servidor.");
     }
   }
 
@@ -183,7 +211,17 @@ export default function Chat() {
       quality: 0.7,
     });
 
-    if (resultado.canceled || !meuUsuarioId || !anuncioId) return;
+    if (resultado.canceled) return;
+
+    if (!meuUsuarioId) {
+      Alert.alert("Sessão expirada", "Faça login novamente.");
+      return;
+    }
+
+    if (!anuncioId) {
+      Alert.alert("Erro", "Dados do anúncio ausentes.");
+      return;
+    }
 
     const foto = resultado.assets[0];
 
@@ -202,11 +240,14 @@ export default function Chat() {
 
       const resposta = await fetch(`${API_URL}/mensagens/foto`, {
         method: "POST",
-        headers: { "Content-Type": "multipart/form-data" },
         body: formData,
       });
 
       const mensagemCriada = await resposta.json();
+
+      if (!resposta.ok) {
+        throw new Error(mensagemCriada.erro || "Erro ao enviar foto");
+      }
 
       const novaMensagem: Mensagem = {
         id: mensagemCriada.id,
@@ -259,7 +300,7 @@ export default function Chat() {
   function irParaFinalizacao() {
     setMenuVisivel(false);
     router.push({
-      pathname: "/finalizacaoTroca",
+      pathname: "/FinalizandoTroca",
       params: {
         anuncioId: String(anuncioId),
         usuarioId: String(meuUsuarioId),

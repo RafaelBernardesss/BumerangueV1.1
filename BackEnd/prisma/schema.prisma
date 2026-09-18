@@ -68,7 +68,7 @@ model Mensagem {
   remetenteId Int
   remetente Usuario @relation("MensagensEnviadas", fields: [remetenteId], references: [id])
 
-  destinatarioId Int
+  destinatarioId Int  
   destinatario Usuario @relation("MensagensRecebidas", fields: [destinatarioId], references: [id])
 
   anuncioId Int
