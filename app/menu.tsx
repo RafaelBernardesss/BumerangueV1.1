@@ -56,7 +56,6 @@ export default function Home() {
         {/* CATEGORIAS */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Categorias</Text>
-          <Text style={styles.link}>Ver todas</Text>
         </View>
 
         <View style={styles.grid}>
@@ -79,7 +78,7 @@ export default function Home() {
       </ScrollView>
 
       {/* BOTÃO FLUTUANTE */}
-      <TouchableOpacity style={styles.fab}>
+      <TouchableOpacity style={styles.fab} onPress={() => router.push("/escolha")}>
         <Ionicons name="add" size={38} color="#000" />
       </TouchableOpacity>
     </SafeAreaView>

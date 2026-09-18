@@ -18,7 +18,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 
-const API_URL = "http://172.30.1.58:3000";
+const API_URL = "http://192.168.18.7:3000";
 
 type Mensagem = {
   id: number;

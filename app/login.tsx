@@ -223,12 +223,12 @@ const styles = StyleSheet.create({
   input: {
     width: "100%",
     height: 48,
-    backgroundColor: "#1E293B",
+    backgroundColor: "#0D1626",
     borderRadius: 12,
     paddingHorizontal: 14,
-    color: "#FFFFFF",
+    color: "#fff",
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: "#00AFFF",
     marginBottom: 10,
   },
   botaoPrimario: {

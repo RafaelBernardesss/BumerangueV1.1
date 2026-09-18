@@ -20,7 +20,9 @@ export async function enviarNotificacaoPush(pushToken, titulo, corpo, dados = {}
     console.error("Erro ao enviar notificação push:", erro);
   }
 
-  export async function enviarPushNotification(pushToken, titulo, corpo, dados = {}) {
+ 
+}
+ export async function enviarPushNotification(pushToken, titulo, corpo, dados = {}) {
   if (!pushToken) return;
 
   try {
@@ -41,5 +43,4 @@ export async function enviarNotificacaoPush(pushToken, titulo, corpo, dados = {}
   } catch (erro) {
     console.error("Erro ao enviar push notification:", erro);
   }
-}
 }

@@ -15,7 +15,6 @@ import Header from "../components/HeaderEscolha";
 
 export default function Escolha() {
     const router = useRouter();
-    const [menuAberto, setMenuAberto] = useState(false);
 
     return (
         <SafeAreaView style={styles.container}>
