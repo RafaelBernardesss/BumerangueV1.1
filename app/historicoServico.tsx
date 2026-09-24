@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/Hearder";
 import { buscarHistorico, limparHistorico, ItemHistorico } from "../src/utils/historico";
 
-const API_URL = "http://172.30.1.72:3000";
+const API_URL = "http://172.30.1.56:3000";
 
 function urlFoto(caminho: string | null) {
   if (!caminho) return null;

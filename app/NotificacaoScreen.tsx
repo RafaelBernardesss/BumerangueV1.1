@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import Flecha from "../components/HeaderFlecha";
 
-const API_URL = "http://172.30.1.72:3000";
+const API_URL = "http://172.30.1.56:3000";
 
 const INTERVALO_ATUALIZACAO = 10000;
 
