@@ -118,9 +118,9 @@ export default function Home() {
 
           console.log("Resposta dos anúncios:", dados);
 
-                   if (!ativo) return;
+          if (!ativo) return;
 
-                    if (resposta.ok) {
+          if (resposta.ok) {
             const lista: Anuncio[] = Array.isArray(dados.anuncios)
               ? dados.anuncios
               : Array.isArray(dados)
@@ -276,25 +276,13 @@ export default function Home() {
           <TouchableOpacity
             style={styles.actionCard}
             activeOpacity={0.7}
-            onPress={() => router.push("/historicoServico")}
+            onPress={() => router.push("/FuncoesAnuncios/ServicosRealizados")}
           >
-            <View style={[styles.circle, { backgroundColor: "#9B4DFF" }]}>
+            <View style={[styles.circle, { backgroundColor: "#00FF44" }]}>
               <Ionicons name="checkmark-done-outline" size={26} color="#000" />
             </View>
             <Text style={styles.actionTitle}>Serviços{"\n"}Realizados</Text>
             <Text style={styles.actionSubtitle}>Todos os serviços realizados</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            activeOpacity={0.7}
-            onPress={() => router.push("/oferecerServicos")}
-          >
-            <View style={[styles.circle, { backgroundColor: "#00FF44" }]}>
-              <Ionicons name="star-outline" size={26} color="#000" />
-            </View>
-            <Text style={styles.actionTitle}>Usuário{"\n"}Favorito</Text>
-            <Text style={styles.actionSubtitle}>Ver os melhores usuários</Text>
           </TouchableOpacity>
         </View>
 
@@ -352,10 +340,10 @@ export default function Home() {
                     <Text style={styles.rating} numberOfLines={1}>
                       {item.categoria?.nome || "Sem categoria"}
                     </Text>
-                     <Estrelas resumo={item.usuario ? resumos[item.usuario.id]: null}/>
+                    <Estrelas resumo={item.usuario ? resumos[item.usuario.id] : null} />
                     {item.cidade ? (
                       <Text style={styles.location} numberOfLines={1}>
-                       {item.cidade}
+                        {item.cidade}
                         {item.estado ? ` - ${item.estado}` : ""}
                       </Text>
                     ) : null}
@@ -518,14 +506,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#050B18",
   },
-  actions: {
+    actions: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    gap: 12,
     paddingHorizontal: 20,
     marginTop: 25,
   },
   actionCard: {
-    width: "31%",
+    flex: 1,
     backgroundColor: "#0D1324",
     borderRadius: 18,
     paddingVertical: 15,
