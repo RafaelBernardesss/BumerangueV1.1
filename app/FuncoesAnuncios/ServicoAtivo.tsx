@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import Flecha from "../../components/HeaderFlecha";
 
-const API_URL = "http://172.30.1.56:3000";
+const API_URL = "http://192.168.137.173:3000";
 
 type Anuncio = {
   id: number;
@@ -41,6 +41,9 @@ const STATUS_LABEL: Record<string, { label: string; cor: string }> = {
   em_andamento: { label: "Em andamento", cor: "#00AFFF" },
   trocado: { label: "Trocado", cor: "#00FF44" },
 };
+
+// CORRIGIDO: agora inclui "ativo" e "pausado", que antes eram descartados
+const STATUS_VISIVEIS = ["ativo", "pausado", "em_andamento", "trocado"];
 
 export default function MeusAnuncios() {
   const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
@@ -67,10 +70,9 @@ export default function MeusAnuncios() {
       const dados = await resposta.json();
 
       if (resposta.ok) {
-        // Mostrar anúncios que estão em andamento ou já foram trocados para mantê-los visíveis
         setAnuncios(
           (dados.anuncios as Anuncio[]).filter((a) =>
-            a.status === "em_andamento" || a.status === "trocado"
+            STATUS_VISIVEIS.includes(a.status)
           )
         );
       } else {
@@ -114,7 +116,9 @@ export default function MeusAnuncios() {
       if (resposta.ok) {
         setAnuncios((prev) => prev.filter((a) => a.id !== id));
       } else {
-        Alert.alert("Erro", "Não foi possível excluir o anúncio.");
+        // NOVO: mostra a mensagem que o backend devolveu (ex.: troca em andamento)
+        const dados = await resposta.json().catch(() => ({}));
+        Alert.alert("Erro", dados.erro || "Não foi possível excluir o anúncio.");
       }
     } catch (erro) {
       console.log(erro);
@@ -163,6 +167,9 @@ export default function MeusAnuncios() {
               cor: "#888",
             };
 
+            // NOVO: anúncio com troca em andamento não pode ser editado nem excluído
+            const travado = item.status === "em_andamento";
+
             return (
               <TouchableOpacity
                 style={styles.card}
@@ -196,25 +203,28 @@ export default function MeusAnuncios() {
                   </View>
                 </View>
 
-                <View style={styles.botoesAcao}>
-                  <TouchableOpacity
-                    style={styles.botaoEditar}
-                    onPress={() =>
-                      router.push({ pathname: "/EditarAnuncio", params: { id: String(item.id) } })
-                    }
-                    hitSlop={8}
-                  >
-                    <Ionicons name="create-outline" size={20} color="#fff" />
-                  </TouchableOpacity>
+                {/* Botões só aparecem quando NÃO há troca em andamento */}
+                {!travado && (
+                  <View style={styles.botoesAcao}>
+                    <TouchableOpacity
+                      style={styles.botaoEditar}
+                      onPress={() =>
+                        router.push({ pathname: "/EditarAnuncio", params: { id: String(item.id) } })
+                      }
+                      hitSlop={8}
+                    >
+                      <Ionicons name="create-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.botaoExcluir}
-                    onPress={() => confirmarExclusao(item.id, item.titulo)}
-                    hitSlop={8}
-                  >
-                    <Ionicons name="trash-outline" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+                    <TouchableOpacity
+                      style={styles.botaoExcluir}
+                      onPress={() => confirmarExclusao(item.id, item.titulo)}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="trash-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </TouchableOpacity>
             );
           }}

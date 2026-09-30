@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = "http://172.30.1.56:3000";
+const API_URL = "http://192.168.137.173:3000";
 
 function urlFoto(caminho: string | null) {
   if (!caminho) return null;
@@ -45,9 +45,18 @@ export default function FinalizacaoTroca() {
 
   const [minhaFoto, setMinhaFoto] = useState<string | null>(null);
   const [fotoDoOutro, setFotoDoOutro] = useState<string | null>(null);
+  const [minhaConfirmou, setMinhaConfirmou] = useState(false);
+  const [outroConfirmou, setOutroConfirmou] = useState(false);
+  const [euSouUltimo, setEuSouUltimo] = useState(false);
+  const [minhaVez, setMinhaVez] = useState(false);
   const [finalizada, setFinalizada] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
+  const [processando, setProcessando] = useState(false);
+
+  // Guarda se na última checagem as duas fotos já estavam enviadas
+  // (serve para avisar quando o OUTRO usuário cancelar)
+  const tinhaAmbasFotosRef = useRef(false);
 
   useEffect(() => {
 
@@ -56,13 +65,38 @@ export default function FinalizacaoTroca() {
     async function carregarStatus() {
       try {
         const resposta = await fetch(
-          `${API_URL}/trocas/${anuncioId}/${meuUsuarioId}/${outroUsuarioId}`
+          `${API_URL}/troca/${anuncioId}/${meuUsuarioId}/${outroUsuarioId}`
         );
+
+        if(!resposta.ok) {
+          const texto = await resposta.text();
+          throw new Error(`Erro ${resposta.status}: ${texto}`)
+        }
+
         const dados = await resposta.json();
+
+        // Se antes tinha as duas fotos e agora não tem nenhuma, o outro cancelou
+        if (
+          tinhaAmbasFotosRef.current &&
+          !dados.minhaFoto &&
+          !dados.fotoDoOutro &&
+          !dados.finalizada
+        ) {
+          Alert.alert(
+            "Troca cancelada",
+            "O outro usuário cancelou a finalização. Enviem as fotos novamente."
+          );
+        }
+        tinhaAmbasFotosRef.current = Boolean(dados.minhaFoto && dados.fotoDoOutro);
 
         setFinalizada(dados.finalizada);
         setMinhaFoto(dados.minhaFoto);
         setFotoDoOutro(dados.fotoDoOutro);
+        setMinhaConfirmou(Boolean(dados.minhaConfirmou));
+        setOutroConfirmou(Boolean(dados.outroConfirmou));
+        setEuSouUltimo(Boolean(dados.euSouUltimo));
+        setMinhaVez(Boolean(dados.minhaVez));
+        
       } catch (erro) {
         console.error("Erro ao carregar status da finalização:", erro);
       } finally {
@@ -103,24 +137,91 @@ export default function FinalizacaoTroca() {
       formData.append("usuarioId", String(meuUsuarioId));
       formData.append("outroUsuarioId", String(outroUsuarioId));
 
-      const resposta = await fetch(`${API_URL}/trocas/enviar-foto`, {
+      const resposta = await fetch(`${API_URL}/troca/enviar-foto`, {
         method: "POST",
-        headers: { "Content-Type": "multipart/form-data" },
         body: formData,
       });
 
       const dados = await resposta.json();
-      setMinhaFoto(foto.uri); // mostra local imediatamente
+      if (!resposta.ok) throw new Error(dados.erro || "Erro ao enviar foto.");
 
-      if (dados.finalizada) {
-        setFinalizada(true);
-      }
+      setMinhaFoto(foto.uri); // mostra local imediatamente
     } catch (erro) {
       console.error("Erro ao enviar foto do serviço:", erro);
       Alert.alert("Erro", "Não foi possível enviar a foto. Tente novamente.");
     } finally {
       setEnviando(false);
     }
+  }
+
+  async function chamarTroca(rota: "confirmar" | "cancelar") {
+    const resposta = await fetch(`${API_URL}/troca/${rota}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        anuncioId: Number(anuncioId),
+        usuarioId: Number(meuUsuarioId),
+        outroUsuarioId: Number(outroUsuarioId),
+      }),
+    });
+
+    const dados = await resposta.json();
+    if (!resposta.ok) throw new Error(dados.erro || "Erro na requisição.");
+    return dados;
+  }
+
+  async function confirmarTroca() {
+    try {
+      setProcessando(true);
+      const dados = await chamarTroca("confirmar");
+      if (dados.finalizada) {
+        setFinalizada(true);
+      } else {
+        setMinhaConfirmou(true);
+        setMinhaVez(false);
+      }
+    } catch (erro: any) {
+      Alert.alert("Erro", erro.message || "Não foi possível confirmar a troca.");
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  async function cancelarTroca() {
+    try {
+      setProcessando(true);
+      tinhaAmbasFotosRef.current = false; // evita o aviso para quem cancelou
+      await chamarTroca("cancelar");
+      setMinhaFoto(null);
+      setFotoDoOutro(null);
+      setMinhaConfirmou(false);
+      setOutroConfirmou(false);
+      setEuSouUltimo(false);
+      setMinhaVez(false);
+      Alert.alert("Troca cancelada", "Vocês precisarão enviar as fotos novamente.");
+    } catch (erro: any) {
+      Alert.alert("Erro", erro.message || "Não foi possível cancelar a troca.");
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  function perguntarConfirmar() {
+    Alert.alert("Confirmar troca", "Tem certeza que deseja confirmar a troca?", [
+      { text: "Voltar", style: "cancel" },
+      { text: "Confirmar", onPress: confirmarTroca },
+    ]);
+  }
+
+  function perguntarCancelar() {
+    Alert.alert(
+      "Cancelar troca",
+      "Ao cancelar, as fotos de ambos serão apagadas e será preciso refazer a finalização. Deseja continuar?",
+      [
+        { text: "Voltar", style: "cancel" },
+        { text: "Cancelar troca", style: "destructive", onPress: cancelarTroca },
+      ]
+    );
   }
 
   if (carregando) {
@@ -138,15 +239,17 @@ export default function FinalizacaoTroca() {
       <SafeAreaView style={styles.container}>
         <View style={styles.centro}>
           <Ionicons name="checkmark-circle" size={72} color="#1DB954" />
-          <Text style={styles.tituloFinalizado}>Serviço finalizado!</Text>
+          <Text style={styles.tituloFinalizado}>Troca finalizada!</Text>
           <Text style={styles.subtitulo}>O anúncio foi concluído e removido.</Text>
-          <TouchableOpacity style={styles.botaoVoltarInicio} onPress={() => router.replace("/")}>
+          <TouchableOpacity style={styles.botaoVoltarInicio} onPress={() => router.replace("/anuncios")}>
             <Text style={styles.textoBotao}>Voltar ao início</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
+
+  const ambasFotos = Boolean(minhaFoto && fotoDoOutro);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -196,6 +299,59 @@ export default function FinalizacaoTroca() {
             Aguardando o outro usuário enviar a foto dele para finalizar.
           </Text>
         )}
+
+        {/* CONFIRMAR / CANCELAR: só aparece para quem está na vez */}
+        {ambasFotos && (
+          <View style={styles.blocoConfirmacao}>
+            {minhaVez && euSouUltimo && (
+              <Text style={styles.aviso}>
+                As duas fotos foram enviadas. Confirme ou cancele a troca.
+              </Text>
+            )}
+
+            {minhaVez && !euSouUltimo && (
+              <Text style={styles.avisoDestaque}>
+                O outro usuário confirmou a troca! Aguardando você confirmar ou cancelar.
+              </Text>
+            )}
+
+            {!minhaVez && minhaConfirmou && (
+              <Text style={styles.aviso}>
+                Você confirmou. Aguardando o outro usuário confirmar ou cancelar.
+              </Text>
+            )}
+
+            {!minhaVez && !minhaConfirmou && !outroConfirmou && (
+              <Text style={styles.aviso}>
+                As duas fotos foram enviadas. Aguardando o outro usuário confirmar ou cancelar.
+              </Text>
+            )}
+
+            {minhaVez && (
+              <View style={styles.acoes}>
+                <TouchableOpacity
+                  style={[styles.botao, styles.botaoCancelar]}
+                  onPress={perguntarCancelar}
+                  disabled={processando}
+                >
+                  <Text style={styles.textoCancelar}>Cancelar</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.botao, styles.botaoConfirmar]}
+                  onPress={perguntarConfirmar}
+                  disabled={processando}
+                >
+                  {processando ? (
+                    <ActivityIndicator color="#000" size="small" />
+                  ) : (
+                    <Text style={styles.textoBotao}>Confirmar</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -230,6 +386,23 @@ const styles = StyleSheet.create({
   },
   textoFotoVazia: { color: "#B8C0CC", fontSize: 13 },
   aviso: { color: "#B8C0CC", fontSize: 13, textAlign: "center", marginTop: 10 },
+  avisoDestaque: { color: "#00FF44", fontSize: 14, fontWeight: "600", textAlign: "center" },
+  blocoConfirmacao: { gap: 12 },
+  acoes: { flexDirection: "row", gap: 10 },
+  botao: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  botaoConfirmar: { backgroundColor: "#00FF44" },
+  botaoCancelar: {
+    backgroundColor: "#1E1E1E",
+    borderWidth: 1,
+    borderColor: "#FF3B3B",
+  },
+  textoCancelar: { color: "#FF3B3B", fontWeight: "700" },
   centro: { flex: 1, justifyContent: "center", alignItems: "center", gap: 10, padding: 20 },
   tituloFinalizado: { color: "#fff", fontSize: 20, fontWeight: "700", marginTop: 10 },
   subtitulo: { color: "#B8C0CC", fontSize: 14, textAlign: "center" },

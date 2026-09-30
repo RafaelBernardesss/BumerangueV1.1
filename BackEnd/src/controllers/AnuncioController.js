@@ -43,22 +43,27 @@ export async function criarAnuncio(req, res) {
     } = req.body;
 
     if (!titulo || typeof titulo !== "string" || titulo.trim().length < 3) {
+      if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ erro: "Informe um título com pelo menos 3 caracteres." });
     }
 
     if (!descricao || typeof descricao !== "string" || descricao.trim().length < 5) {
+      if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ erro: "Informe uma descrição com pelo menos 5 caracteres." });
     }
 
     if (!preferencia || typeof preferencia !== "string" || preferencia.trim().length === 0) {
+      if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ erro: "Informe a preferência de troca." });
     }
 
     if (!categoriaId) {
+      if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ erro: "Informe a categoria do anúncio." });
     }
 
     if (!usuarioId) {
+      if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ erro: "Usuário não informado." });
     }
 
@@ -184,6 +189,7 @@ export async function atualizarAnuncio(req, res) {
     } = req.body;
 
     if (!idAnuncio) {
+      if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(400).json({ erro: "ID do anúncio não informado." });
     }
 
@@ -194,6 +200,26 @@ export async function atualizarAnuncio(req, res) {
     if (!anuncioExistente) {
       if (req.file) fs.unlink(req.file.path, () => {});
       return res.status(404).json({ erro: "Anúncio não encontrado." });
+    }
+
+    // NOVO: durante a troca em andamento, o conteúdo do anúncio não pode ser editado.
+    // Só é permitido mudar o status (ex.: em_andamento -> trocado, ou voltar para ativo
+    // se a troca for cancelada), para não travar o fluxo de troca.
+    if (anuncioExistente.status === "em_andamento") {
+      const tentandoEditarConteudo =
+        titulo !== undefined ||
+        descricao !== undefined ||
+        preferencia !== undefined ||
+        categoriaId !== undefined ||
+        disponibilidade !== undefined ||
+        Boolean(req.file);
+
+      if (tentandoEditarConteudo) {
+        if (req.file) fs.unlink(req.file.path, () => {});
+        return res.status(409).json({
+          erro: "Não é possível editar um anúncio com troca em andamento.",
+        });
+      }
     }
 
     if (titulo !== undefined && (typeof titulo !== "string" || titulo.trim().length < 3)) {
@@ -211,10 +237,13 @@ export async function atualizarAnuncio(req, res) {
       return res.status(400).json({ erro: "Informe a preferência de troca." });
     }
 
-    const statusValidos = ["ativo", "vendido", "pausado", "trocado"];
+    // CORRIGIDO: inclui "em_andamento" e a mensagem de erro agora lista todos os status
+    const statusValidos = ["ativo", "vendido", "pausado", "trocado", "em_andamento"];
     if (status !== undefined && !statusValidos.includes(status)) {
       if (req.file) fs.unlink(req.file.path, () => {});
-      return res.status(400).json({ erro: "Status inválido. Use: ativo, vendido ou pausado." });
+      return res.status(400).json({
+        erro: "Status inválido. Use: ativo, pausado, em_andamento, trocado ou vendido.",
+      });
     }
 
     const dadosParaAtualizar = {};
@@ -274,6 +303,7 @@ export async function atualizarAnuncio(req, res) {
 
 /**
  * Exclui um anúncio permanentemente, junto com a foto salva no disco.
+ * Não permite excluir enquanto houver troca em andamento.
  * Rota sugerida: DELETE /anuncios/:id
  */
 export async function excluirAnuncio(req, res) {
@@ -290,6 +320,13 @@ export async function excluirAnuncio(req, res) {
 
     if (!anuncioExistente) {
       return res.status(404).json({ erro: "Anúncio não encontrado." });
+    }
+
+    // NOVO: bloqueia exclusão durante a troca
+    if (anuncioExistente.status === "em_andamento") {
+      return res.status(409).json({
+        erro: "Não é possível excluir um anúncio com troca em andamento.",
+      });
     }
 
     if (anuncioExistente.foto) {

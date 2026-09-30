@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import Header from "../components/Hearder";
 
-const API_URL = "http://172.30.1.56:3000";
+const API_URL = "http://192.168.137.173:3000";
 
 type Contato = {
   id: number;

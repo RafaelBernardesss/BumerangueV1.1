@@ -99,8 +99,12 @@ model Troca {
 
   usuarioAFoto String? 
   usuarioBFoto String? 
-  finalizada Boolean @default(false)
 
+  usuarioAConfirmou Boolean @default(false)
+  usuarioBConfirmou Boolean @default(false)
+
+  finalizada Boolean @default(false)
+  ultimoEnviouId Int?
   criadoEm DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 

@@ -17,7 +17,7 @@ import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import Header from "../components/HeaderEscolha";
 
-const API_URL = "http://172.30.1.56:3000";
+const API_URL = "http://192.168.137.173:3000";
 
 type Categoria = {
   id: number;
@@ -153,11 +153,10 @@ export default function PublicarServico() {
         } as any);
       }
 
+      // CORRIGIDO: sem o header "Content-Type" manual. O fetch define sozinho
+      // o multipart/form-data com o boundary correto.
       const resposta = await fetch(`${API_URL}/anuncios`, {
         method: "POST",
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
         body: formData,
       });
 

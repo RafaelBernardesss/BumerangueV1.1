@@ -15,9 +15,11 @@ import {
 } from "react-native";
 import Flecha from "../components/HeaderFlecha";
 
-const API_URL = "http://172.30.1.56:3000";
+const API_URL = "http://192.168.137.173:3000";
 
 const INTERVALO_ATUALIZACAO = 10000;
+
+type Aba = "recebidas" | "enviadas" | "trocas";
 
 type PropostaRecebida = {
   id: number;
@@ -48,6 +50,11 @@ type TrocaPendente = {
   outroUsuarioFoto: string | null;
   minhaFotoEnviada: boolean;
   fotoDoOutroEnviada: boolean;
+  minhaConfirmou: boolean;
+  outroConfirmou: boolean;
+  euSouUltimo: boolean;
+  minhaVez: boolean;
+  finalizada: boolean;
   atualizadoEm: string;
 };
 
@@ -81,7 +88,7 @@ const STATUS_INFO: Record<string, { label: string; cor: string }> = {
 
 export default function Notificacoes() {
   const router = useRouter();
-  const [aba, setAba] = useState<"recebidas" | "enviadas" | "trocas">("recebidas");
+  const [aba, setAba] = useState<Aba>("recebidas");
 
   const [recebidas, setRecebidas] = useState<PropostaRecebida[]>([]);
   const [enviadas, setEnviadas] = useState<PropostaEnviada[]>([]);
@@ -89,8 +96,6 @@ export default function Notificacoes() {
   const [carregando, setCarregando] = useState(true);
   const [respondendo, setRespondendo] = useState<number | null>(null);
 
-  // Carrega ao entrar na tela e busca novidades a cada 10 segundos.
-  // Ao sair da tela, o intervalo é cancelado.
   useFocusEffect(
     useCallback(() => {
       carregarTudo();
@@ -99,8 +104,6 @@ export default function Notificacoes() {
     }, [])
   );
 
-  // Busca uma rota e devolve o JSON, ou null se ela falhar.
-  // Assim, uma rota com problema não derruba as outras duas.
   async function buscarRota(nome: string, url: string) {
     try {
       const resposta = await fetch(url);
@@ -123,7 +126,6 @@ export default function Notificacoes() {
     }
   }
 
-  // silencioso = true: atualiza a lista sem mostrar o spinner de carregamento
   async function carregarTudo(silencioso = false) {
     try {
       if (!silencioso) setCarregando(true);
@@ -186,8 +188,11 @@ export default function Notificacoes() {
   }
 
   function abrirFinalizacao(troca: TrocaPendente) {
+    // Troca já finalizada: não precisa abrir a tela de finalização
+    if (troca.finalizada) return;
+
     router.push({
-      pathname: "/finalizacaoTroca",
+      pathname: "/FinalizandoTroca",
       params: {
         anuncioId: String(troca.anuncioId),
         outroUsuarioId: String(troca.outroUsuarioId),
@@ -197,6 +202,40 @@ export default function Notificacoes() {
 
   const pendentesRecebidas = recebidas.filter((p) => p.status === "pendente");
   const respondidasRecebidas = recebidas.filter((p) => p.status !== "pendente");
+
+  // Precisa da minha ação: enviar foto, ou confirmar/cancelar quando for a minha vez
+  function precisaAgirNaTroca(t: TrocaPendente) {
+    if (t.finalizada) return false;
+    if (!t.minhaFotoEnviada) return true;
+    return t.minhaVez;
+  }
+
+  const trocasParaAgir = trocas.filter(precisaAgirNaTroca);
+  const trocasOrdenadas = [...trocas].sort(
+    (a, b) => Number(precisaAgirNaTroca(b)) - Number(precisaAgirNaTroca(a))
+  );
+
+  // Total de coisas esperando uma ação do usuário (aparece no cabeçalho)
+  const totalPendencias = pendentesRecebidas.length + trocasParaAgir.length;
+
+  function renderTab(chave: Aba, label: string, contagem: number) {
+    const ativa = aba === chave;
+    return (
+      <TouchableOpacity
+        style={[styles.tab, ativa && styles.tabAtiva]}
+        onPress={() => setAba(chave)}
+      >
+        <View style={styles.tabConteudo}>
+          <Text style={[styles.tabTexto, ativa && styles.tabTextoAtivo]}>{label}</Text>
+          {contagem > 0 && (
+            <View style={styles.tabBadge}>
+              <Text style={styles.tabBadgeTexto}>{contagem > 9 ? "9+" : contagem}</Text>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  }
 
   function renderRecebida(item: PropostaRecebida) {
     return (
@@ -288,20 +327,46 @@ export default function Notificacoes() {
   }
 
   function renderTroca(item: TrocaPendente) {
-    // Texto de status do ponto de vista de quem está olhando a tela
     let statusTexto = "";
     let statusCor = "#FFB800";
 
-    if (item.minhaFotoEnviada && !item.fotoDoOutroEnviada) {
-      statusTexto = `Aguardando ${item.outroUsuarioNome} enviar a foto`;
+    const ambasFotos = item.minhaFotoEnviada && item.fotoDoOutroEnviada;
+
+    if (item.finalizada) {
+      statusTexto = "Troca finalizada";
+      statusCor = "#00FF44";
+    } else if (ambasFotos && item.minhaVez && !item.euSouUltimo) {
+      // O outro (último a enviar foto) já confirmou, agora é a minha vez
+      statusTexto = `${item.outroUsuarioNome} confirmou a troca! Aguardando você confirmar ou cancelar`;
+      statusCor = "#00FF44";
+    } else if (ambasFotos && item.minhaVez && item.euSouUltimo) {
+      statusTexto = "Fotos enviadas! Toque para confirmar ou cancelar";
+      statusCor = "#00AFFF";
+    } else if (ambasFotos && item.minhaConfirmou) {
+      statusTexto = `Você confirmou. Aguardando ${item.outroUsuarioNome} confirmar ou cancelar`;
       statusCor = "#FFB800";
+    } else if (ambasFotos) {
+      statusTexto = `Aguardando ${item.outroUsuarioNome} confirmar ou cancelar`;
+      statusCor = "#FFB800";
+    } else if (!item.minhaFotoEnviada && item.fotoDoOutroEnviada) {
+      statusTexto = `${item.outroUsuarioNome} já enviou a foto! Toque para enviar a sua`;
+      statusCor = "#00FF44";
     } else if (!item.minhaFotoEnviada) {
       statusTexto = "Toque para enviar sua foto do serviço";
       statusCor = "#00AFFF";
+    } else {
+      statusTexto = `Aguardando ${item.outroUsuarioNome} enviar a foto`;
+      statusCor = "#FFB800";
     }
 
+    const precisaAgir = precisaAgirNaTroca(item);
+
     return (
-      <TouchableOpacity key={`${item.anuncioId}-${item.outroUsuarioId}`} style={styles.card} onPress={() => abrirFinalizacao(item)}>
+      <TouchableOpacity
+        key={`${item.anuncioId}-${item.outroUsuarioId}`}
+        style={[styles.card, precisaAgir && styles.cardNaoLida]}
+        onPress={() => abrirFinalizacao(item)}
+      >
         <View style={styles.cardTopoLinha}>
           {item.outroUsuarioFoto ? (
             <Image source={{ uri: urlFoto(item.outroUsuarioFoto)! }} style={styles.avatar} />
@@ -312,9 +377,11 @@ export default function Notificacoes() {
           <View style={styles.cardTexto}>
             <View style={styles.cardTopo}>
               <Text style={styles.cardTitulo} numberOfLines={1}>
-                Finalizar troca com {item.outroUsuarioNome}
+                {item.finalizada
+                  ? `Troca com ${item.outroUsuarioNome}`
+                  : `Finalizar troca com ${item.outroUsuarioNome}`}
               </Text>
-              {!item.minhaFotoEnviada && <View style={styles.dot} />}
+              {precisaAgir && <View style={styles.dot} />}
             </View>
             <Text style={styles.cardDescricao} numberOfLines={2}>
               Anúncio: "{item.anuncioTitulo}"
@@ -337,42 +404,19 @@ export default function Notificacoes() {
         <Flecha></Flecha>
         <View style={styles.headerTextWrapper}>
           <Text style={styles.headerTitulo}>Notificações</Text>
-          {pendentesRecebidas.length > 0 && (
+          {totalPendencias > 0 && (
             <Text style={styles.headerSubtitulo}>
-              {pendentesRecebidas.length} pendente{pendentesRecebidas.length === 1 ? "" : "s"}
+              {totalPendencias} pendente{totalPendencias === 1 ? "" : "s"}
             </Text>
           )}
         </View>
       </View>
 
-      {/* ABAS */}
+      {/* ABAS (com contador de itens esperando ação) */}
       <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, aba === "recebidas" && styles.tabAtiva]}
-          onPress={() => setAba("recebidas")}
-        >
-          <Text style={[styles.tabTexto, aba === "recebidas" && styles.tabTextoAtivo]}>
-            Recebidas
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, aba === "enviadas" && styles.tabAtiva]}
-          onPress={() => setAba("enviadas")}
-        >
-          <Text style={[styles.tabTexto, aba === "enviadas" && styles.tabTextoAtivo]}>
-            Enviadas
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, aba === "trocas" && styles.tabAtiva]}
-          onPress={() => setAba("trocas")}
-        >
-          <Text style={[styles.tabTexto, aba === "trocas" && styles.tabTextoAtivo]}>
-            Trocas
-          </Text>
-        </TouchableOpacity>
+        {renderTab("recebidas", "Recebidas", pendentesRecebidas.length)}
+        {renderTab("enviadas", "Enviadas", 0)}
+        {renderTab("trocas", "Trocas", trocasParaAgir.length)}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -424,7 +468,7 @@ export default function Notificacoes() {
             </Text>
           </View>
         ) : (
-          trocas.map(renderTroca)
+          trocasOrdenadas.map(renderTroca)
         )}
 
         <View style={{ height: 40 }} />
@@ -477,6 +521,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#00AFFF",
     borderColor: "#00AFFF",
   },
+  tabConteudo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   tabTexto: {
     color: "#9CA3AF",
     fontWeight: "600",
@@ -484,6 +533,20 @@ const styles = StyleSheet.create({
   },
   tabTextoAtivo: {
     color: "#000",
+  },
+  tabBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    backgroundColor: "#FF3B3B",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tabBadgeTexto: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
   },
   scrollContent: {
     paddingHorizontal: 20,
