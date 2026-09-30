@@ -16,7 +16,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import Header from "../components/HeaderEscolha";
 import { adicionarAoHistorico } from "@/src/utils/historico";
-
+import Estrelas from "../components/Estrela";
+import { buscarResumo, ResumoAvaliacao } from "../src/utils/avaliacoes";
 const API_URL = "http://192.168.137.173:3000";
 
 type Anuncio = {
@@ -54,7 +55,7 @@ export default function AnuncioScreen() {
   const [anuncio, setAnuncio] = useState<Anuncio | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(false);
-
+  const [resumo, setResumo] = useState<ResumoAvaliacao | null>(null);
   const [servicoEscolhido, setServicoEscolhido] = useState<string | null>(null);
   const [propostaTexto, setPropostaTexto] = useState("");
   const [mensagem, setMensagem] = useState("");
@@ -78,6 +79,9 @@ export default function AnuncioScreen() {
         setAnuncio(dados.anuncio);
 
         adicionarAoHistorico(dados.anuncio);
+        const resumos = await buscarResumo([dados.anuncio.usuario.id]);
+        setResumo(resumos[dados.anuncio.usuario.id] ?? null);
+
       } else {
         setErro(true);
       }
@@ -209,6 +213,7 @@ export default function AnuncioScreen() {
           )}
           <View style={{ flex: 1 }}>
             <Text style={styles.userName}>{anuncio.usuario.nome}</Text>
+            <Estrelas resumo={resumo} />
             <Text style={styles.info}>{formatarLocal(anuncio)}</Text>
           </View>
         </View>

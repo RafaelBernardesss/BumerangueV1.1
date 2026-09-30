@@ -15,6 +15,8 @@ import {
   View,
 } from "react-native";
 import Header from "../components/HeaderEscolha";
+import Estrelas from "../components/Estrela";
+import { buscarResumo, ResumoAvaliacao } from "../src/utils/avaliacoes";
 
 const API_URL = "http://192.168.137.173:3000";
 
@@ -48,7 +50,7 @@ export default function AnunciosDisponiveis() {
   console.log("TELA DE ANUNCIO MONTADA");
   const [categoriaAtiva, setCategoriaAtiva] = useState<number | "Todos">("Todos");
   const [busca, setBusca] = useState("");
-
+  const [resumos, setResumos] = useState<Record<number, ResumoAvaliacao>>({});
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [anuncios, setAnuncios] = useState<Anuncio[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -65,7 +67,14 @@ export default function AnunciosDisponiveis() {
         throw new Error(dados.erro || "Não foi possível carregar os anúncios.");
       }
 
-      setAnuncios(Array.isArray(dados.anuncios) ? dados.anuncios : []);
+            const lista: Anuncio[] = Array.isArray(dados.anuncios) ? dados.anuncios : [];
+      setAnuncios(lista);
+
+      const ids: number[] = lista
+        .map((a) => a.usuario?.id)
+        .filter((id): id is number => typeof id === "number");
+
+      setResumos(await buscarResumo(ids));
     } catch (erro) {
       console.log("Erro ao buscar anúncios:", erro);
       setAnuncios([]);
@@ -234,6 +243,7 @@ export default function AnunciosDisponiveis() {
 
             <View style={{ flex: 1 }}>
               <Text style={styles.userName}>{item.usuario.nome}</Text>
+              <Estrelas resumo={resumos[item.usuario.id]}/>
 
               <Text style={styles.serviceTitle}>{item.titulo}</Text>
 

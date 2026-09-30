@@ -109,4 +109,23 @@ model Troca {
   atualizadoEm DateTime @updatedAt
 
   @@unique([anuncioId, usuarioBId])
+  
+  avaliacao Avaliacao[]
+}
+
+model Avaliacao {
+  id Int @id @default(autoincrement())
+
+  trocaId Int
+  troca Troca @relation(fields: [trocaId], references: [id], onDelete: Cascade)
+
+  avaliadorId Int
+  avaliadoId Int
+
+  nota Int
+  comentario String?
+  criadoEm DateTime @default(now())
+
+  @@unique([trocaId, avaliadorId])
+  @@index([avaliadoId])
 }

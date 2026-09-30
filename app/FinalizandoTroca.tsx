@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import AvaliarTroca from "../components/AvaliarTroca";
 
 const API_URL = "http://192.168.137.173:3000";
 
@@ -241,6 +242,11 @@ export default function FinalizacaoTroca() {
           <Ionicons name="checkmark-circle" size={72} color="#1DB954" />
           <Text style={styles.tituloFinalizado}>Troca finalizada!</Text>
           <Text style={styles.subtitulo}>O anúncio foi concluído e removido.</Text>
+           <AvaliarTroca
+           anuncioId={anuncioId}
+           meuUsuarioId={meuUsuarioId}
+           outroUsuarioId={outroUsuarioId}
+           />
           <TouchableOpacity style={styles.botaoVoltarInicio} onPress={() => router.replace("/anuncios")}>
             <Text style={styles.textoBotao}>Voltar ao início</Text>
           </TouchableOpacity>

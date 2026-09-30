@@ -188,9 +188,6 @@ export default function Notificacoes() {
   }
 
   function abrirFinalizacao(troca: TrocaPendente) {
-    // Troca já finalizada: não precisa abrir a tela de finalização
-    if (troca.finalizada) return;
-
     router.push({
       pathname: "/FinalizandoTroca",
       params: {

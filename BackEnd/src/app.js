@@ -11,6 +11,7 @@ import rotaCategoria from "./routes/rota-Categoria.js";
 import rotaProposta from "./routes/rota-proposta.js";
 import rotaMensagem from "./routes/rota-mensagem.js";
 import rotaTroca from "./routes/rota-troca.js";
+import rotaAvaliacao from "./routes/rota-avaliacao.js";
 import path from "path";
 
 const app = express();
@@ -28,5 +29,6 @@ app.use("/uploads", express.static(path.resolve("uploads")));
 app.use("/propostas", rotaProposta);
 app.use("/mensagens", rotaMensagem);
 app.use("/troca", rotaTroca);
+app.use("/avaliacoes", rotaAvaliacao);
 
 export default app;

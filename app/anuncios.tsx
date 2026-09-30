@@ -13,7 +13,8 @@ import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
-
+import Estrelas from "../components/Estrela";
+import { buscarResumo, ResumoAvaliacao } from "../src/utils/avaliacoes";
 import Header from "../components/Hearder";
 import { buscarHistorico, ItemHistorico } from "../src/utils/historico";
 
@@ -66,6 +67,8 @@ export default function Home() {
   const [meusAnuncios, setMeusAnuncios] = useState<Anuncio[]>([]);
   const [carregandoAnuncios, setCarregandoAnuncios] = useState(true);
 
+  const [resumos, setResumos] = useState<Record<number, ResumoAvaliacao>>({});
+
   useFocusEffect(
     useCallback(() => {
       let ativo = true;
@@ -115,17 +118,27 @@ export default function Home() {
 
           console.log("Resposta dos anúncios:", dados);
 
-          if (!ativo) return;
+                   if (!ativo) return;
 
-          if (resposta.ok) {
-            if (Array.isArray(dados.anuncios)) {
-              setMeusAnuncios(dados.anuncios);
-            } else if (Array.isArray(dados)) {
-              setMeusAnuncios(dados);
-            } else {
+                    if (resposta.ok) {
+            const lista: Anuncio[] = Array.isArray(dados.anuncios)
+              ? dados.anuncios
+              : Array.isArray(dados)
+              ? dados
+              : [];
+
+            if (lista.length === 0 && !Array.isArray(dados.anuncios) && !Array.isArray(dados)) {
               console.log("Formato de anúncios não reconhecido:", dados);
-              setMeusAnuncios([]);
             }
+
+            setMeusAnuncios(lista);
+
+            const ids: number[] = lista
+              .map((a) => a.usuario?.id)
+              .filter((id): id is number => typeof id === "number");
+
+            const r = await buscarResumo(ids);
+            if (ativo) setResumos(r);
           } else {
             console.log("Erro ao buscar anúncios:", dados?.erro || dados?.mensagem);
             setMeusAnuncios([]);
@@ -339,9 +352,10 @@ export default function Home() {
                     <Text style={styles.rating} numberOfLines={1}>
                       {item.categoria?.nome || "Sem categoria"}
                     </Text>
+                     <Estrelas resumo={item.usuario ? resumos[item.usuario.id]: null}/>
                     {item.cidade ? (
                       <Text style={styles.location} numberOfLines={1}>
-                        📍 {item.cidade}
+                       {item.cidade}
                         {item.estado ? ` - ${item.estado}` : ""}
                       </Text>
                     ) : null}
