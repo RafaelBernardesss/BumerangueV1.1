@@ -58,7 +58,6 @@ const ESTADOS_UF: Record<string, string> = {
 function converterParaSiglaUF(nomeEstado: string): string {
   if (!nomeEstado) return "";
 
-  // Se já vier como sigla (2 letras), só normaliza pra maiúsculo
   const semAcento = nomeEstado
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
