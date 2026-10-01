@@ -6,7 +6,6 @@ generator client {
 
 datasource db {
   provider = "sqlite"
- 
 }
 
 model Usuario {
@@ -98,7 +97,7 @@ model Troca {
   usuarioBId Int 
 
   usuarioAFoto String? 
-  usuarioBFoto String? 
+  usuarioBFoto String?  
 
   usuarioAConfirmou Boolean @default(false)
   usuarioBConfirmou Boolean @default(false)

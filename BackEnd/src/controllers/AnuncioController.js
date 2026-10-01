@@ -301,11 +301,6 @@ export async function atualizarAnuncio(req, res) {
   }
 }
 
-/**
- * Exclui um anúncio permanentemente, junto com a foto salva no disco.
- * Não permite excluir enquanto houver troca em andamento.
- * Rota sugerida: DELETE /anuncios/:id
- */
 export async function excluirAnuncio(req, res) {
   try {
     const idAnuncio = Number(req.params.id);
@@ -346,5 +341,61 @@ export async function excluirAnuncio(req, res) {
   } catch (erro) {
     console.error("Erro ao excluir anúncio:", erro);
     return res.status(500).json({ erro: "Erro interno ao excluir o anúncio." });
+  }
+
+  
+}
+
+export async function listarServicosRealizados(req, res) {
+  try {
+    const idUsuario = Number(req.query.usuarioId);
+
+    if (!idUsuario) {
+      return res.status(400).json({ erro: "Usuário não informado." });
+    }
+
+    const trocas = await prisma.troca.findMany({
+      where: {
+        finalizada: true,
+        OR: [{ usuarioAId: idUsuario }, { usuarioBId: idUsuario }],
+      },
+      orderBy: { atualizadoEm: "desc" },
+      include: {
+        anuncio: { select: SELECT_ANUNCIO_COMPLETO },
+      },
+    });
+
+    // A tabela Troca só guarda os ids, então busco o nome/foto da outra pessoa
+    const idsParceiros = [
+      ...new Set(
+        trocas.map((t) =>
+          t.usuarioAId === idUsuario ? t.usuarioBId : t.usuarioAId
+        )
+      ),
+    ];
+
+    const parceiros = await prisma.usuario.findMany({
+      where: { id: { in: idsParceiros } },
+      select: { id: true, nome: true, foto: true },
+    });
+
+    const mapaParceiros = new Map(parceiros.map((u) => [u.id, u]));
+
+    const servicos = trocas.map((t) => {
+      const idParceiro = t.usuarioAId === idUsuario ? t.usuarioBId : t.usuarioAId;
+
+      return {
+        ...t.anuncio, // id, titulo, foto, categoria, cidade...
+        trocaId: t.id,
+        finalizadaEm: t.atualizadoEm,
+        papel: t.anuncio.usuarioId === idUsuario ? "anunciante" : "solicitante",
+        parceiro: mapaParceiros.get(idParceiro) || null,
+      };
+    });
+
+    return res.status(200).json({ servicos });
+  } catch (erro) {
+    console.error("Erro ao listar serviços realizados:", erro);
+    return res.status(500).json({ erro: "Erro interno ao listar os serviços realizados." });
   }
 }

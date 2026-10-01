@@ -201,8 +201,15 @@ export default function AnuncioScreen() {
           <View style={styles.banner} />
         )}
 
-        {/* Card do anunciante */}
-        <View style={styles.card}>
+        {/* Card do anunciante: toque abre o perfil dele */}
+        <TouchableOpacity
+          style={styles.card}
+          activeOpacity={0.7}
+          onPress={() => router.push({
+            pathname: "/perfilUsuario",
+            params: { id: anuncio.usuario.id.toString() },
+          })}
+        >
           {anuncio.usuario.foto ? (
             <Image
               source={{ uri: `${API_URL}/${anuncio.usuario.foto.replace(/\\/g, "/")}` }}
@@ -216,7 +223,8 @@ export default function AnuncioScreen() {
             <Estrelas resumo={resumo} />
             <Text style={styles.info}>{formatarLocal(anuncio)}</Text>
           </View>
-        </View>
+          <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
 
         {/* Detalhes do serviço */}
         <Text style={styles.servicoTitulo}>{anuncio.titulo}</Text>

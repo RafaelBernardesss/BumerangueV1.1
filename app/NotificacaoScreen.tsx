@@ -197,6 +197,13 @@ export default function Notificacoes() {
     });
   }
 
+  function abrirPerfil(usuarioId: number, anuncioId: number) {
+    router.push({
+      pathname: "/perfilUsuario",
+      params: { id: String(usuarioId), anuncioId: String(anuncioId) },
+    });
+  }
+
   const pendentesRecebidas = recebidas.filter((p) => p.status === "pendente");
   const respondidasRecebidas = recebidas.filter((p) => p.status !== "pendente");
 
@@ -237,7 +244,12 @@ export default function Notificacoes() {
   function renderRecebida(item: PropostaRecebida) {
     return (
       <View key={item.id} style={[styles.card, item.status === "pendente" && styles.cardNaoLida]}>
-        <View style={styles.cardTopoLinha}>
+        {/* Tocar aqui abre o perfil de quem enviou a proposta */}
+        <TouchableOpacity
+          style={styles.cardTopoLinha}
+          activeOpacity={0.7}
+          onPress={() => abrirPerfil(item.usuario.id, item.anuncio.id)}
+        >
           {item.usuario.foto ? (
             <Image source={{ uri: urlFoto(item.usuario.foto)! }} style={styles.avatar} />
           ) : (
@@ -254,9 +266,12 @@ export default function Notificacoes() {
             <Text style={styles.cardDescricao} numberOfLines={2}>
               Sobre "{item.anuncio.titulo}": {item.mensagem}
             </Text>
-            <Text style={styles.cardData}>{formatarTempoRelativo(item.criadoEm)}</Text>
+            <View style={styles.linhaVerPerfil}>
+              <Text style={styles.cardData}>{formatarTempoRelativo(item.criadoEm)}</Text>
+              <Text style={styles.verPerfil}>Ver perfil</Text>
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {item.status === "pendente" ? (
           <View style={styles.acoes}>
@@ -608,6 +623,17 @@ const styles = StyleSheet.create({
   cardData: {
     color: "#555",
     fontSize: 12,
+    marginTop: 8,
+  },
+  linhaVerPerfil: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  verPerfil: {
+    color: "#00AFFF",
+    fontSize: 12,
+    fontWeight: "600",
     marginTop: 8,
   },
   acoes: {
